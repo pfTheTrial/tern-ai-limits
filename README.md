@@ -2,6 +2,8 @@
 
 A Tern plugin that shows how much of your AI coding plans you have left: every limit window (5-hour, weekly, monthly, plan period) as a ring, with the time until it resets. It lives in a side column, a drawer, a floating card, its own tab, the status bar and the window title, and it can warn you before a limit runs out.
 
+![The Limits tab: every account, its limit windows and the last day of usage](screenshots/dashboard.png)
+
 The interface is in English, with Brazilian Portuguese as an option (**AI Limits: language**).
 
 ## Providers
@@ -71,6 +73,16 @@ Inside the panel: `r` refreshes, `e` hides or shows e-mails, `c` opens the setti
 - **Hiding:** hiding the panel parks it as a chip at the bottom of the window. Click the chip to bring it back.
 - **Floating card:** at rest it shows one line per provider, or a single provider. Click it to focus it: Tern enlarges it and it shows everything.
 - **Several accounts of one provider:** click an account's row to put it in front. The pin icon in the card header goes back to the most available account.
+
+## Screenshots
+
+| Side column | Floating card |
+| --- | --- |
+| ![The side column next to a terminal](screenshots/column.png) | ![The floating card at rest, one line per provider](screenshots/floating-card.png) |
+| **Compact list** | **Command palette** |
+| ![The Limits tab with the compact list density](screenshots/compact.png) | ![The plugin's commands in the palette](screenshots/palette.png) |
+
+The screenshots use demo accounts and made-up numbers.
 
 ## Settings
 
