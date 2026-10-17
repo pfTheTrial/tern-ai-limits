@@ -1,0 +1,26 @@
+schema = 1
+id = "ai-limits"
+name = "AI Limits"
+version = "0.6.0"
+description = "Limites de uso das contas logadas no omp, com ou sem omp (Claude Code, Codex, Cursor, Grok, Factory, OpenCode Go, Command Code): coluna lateral, gaveta, cartão flutuante, aba, barra de status, avisos e lens."
+icon = "gauge"
+host = "host.luau"
+window = "window.luau"
+styles = ["ai-limits.css"]
+
+[[blocks]]
+id = "cards"
+title = "Limites de IA"
+icon = "gauge"
+# The window half places it as a side column, drawer or floating card.
+palette = false
+
+[[blocks]]
+id = "dashboard"
+title = "Limites (aba)"
+icon = "gauge"
+palette = false
+
+[[lenses]]
+id = "usage"
+match = ["omp usage", "omp usage *"]

@@ -1,0 +1,505 @@
+/* AI Limits: CodexBar-style provider cards with one ring per limit window.
+   Every rule but the PiP one at the end is scoped under .ail-root, the element view.luau wraps each
+   tree in (side panel, "Limites" tab and the omp usage lens). `.sf-meter`/`.sf-mt-ring` are
+   Tern's ring internals ("may change"): if they do, rings fall back to the
+   native 24px size and the percentage still reads beside them. */
+
+.ail-root {
+	--ail-ring: 42px;
+	font-family: var(--sans);
+
+	.ail-grid {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 8px;
+	}
+
+	.ail-card {
+		flex: 1 1 220px;
+		display: flex;
+		flex-direction: column;
+		gap: 10px;
+		padding: 10px 12px 12px;
+		background: var(--card);
+		border: 1px solid var(--l2);
+		border-radius: 12px;
+		box-shadow: 0 1px 2px rgb(from var(--t1) r g b/4%);
+	}
+	.ail-card[data-level='warn'] { border-color: rgb(from var(--warn) r g b/40%); }
+	.ail-card[data-level='bad'] { border-color: rgb(from var(--bad) r g b/40%); }
+
+	.ail-head {
+		display: flex;
+		align-items: center;
+		gap: 8px;
+	}
+	.ail-logo {
+		flex: none;
+		width: 24px;
+		height: 24px;
+		border-radius: 7px;
+		background-color: var(--chip-bg);
+		background-size: 15px 15px;
+		background-position: center;
+		background-repeat: no-repeat;
+	}
+	.ail-title {
+		flex: 1 1 auto;
+		min-width: 0;
+		display: flex;
+		flex-direction: column;
+	}
+	.ail-name {
+		font-size: 13px;
+		line-height: 16px;
+		font-weight: 600;
+		color: var(--t1);
+	}
+	.ail-sub {
+		font-size: 11px;
+		line-height: 14px;
+		color: var(--t3);
+		white-space: nowrap;
+		overflow: hidden;
+		text-overflow: ellipsis;
+	}
+	.ail-meta {
+		flex: none;
+		display: flex;
+		gap: 4px;
+	}
+	.ail-plan,
+	.ail-count {
+		font-size: 10px;
+		line-height: 17px;
+		padding: 0 7px;
+		border-radius: 9px;
+		background: var(--chip-bg);
+		color: var(--t2);
+		font-variant-numeric: tabular-nums;
+	}
+	.ail-plan { text-transform: capitalize; }
+
+	.ail-group {
+		display: flex;
+		flex-direction: column;
+		gap: 5px;
+	}
+	.ail-family {
+		font-size: 10px;
+		line-height: 12px;
+		color: var(--t3);
+		text-transform: uppercase;
+		letter-spacing: 0.06em;
+	}
+	.ail-rings {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 8px 16px;
+	}
+	.ail-tile {
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		min-width: var(--ail-ring);
+	}
+	.ail-ring {
+		position: relative;
+		width: var(--ail-ring);
+		height: var(--ail-ring);
+		margin-bottom: 3px;
+	}
+	.ail-ring .sf-meter {
+		display: block;
+		width: var(--ail-ring);
+		height: var(--ail-ring);
+	}
+	.ail-ring .sf-mt-ring {
+		width: var(--ail-ring);
+		height: var(--ail-ring);
+	}
+	.ail-pct {
+		position: absolute;
+		left: 0;
+		top: 0;
+		width: var(--ail-ring);
+		height: var(--ail-ring);
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		font-size: 10px;
+		font-weight: 600;
+		color: var(--t1);
+		font-variant-numeric: tabular-nums;
+	}
+	.ail-win {
+		max-width: 84px;
+		font-size: 11px;
+		line-height: 13px;
+		font-weight: 500;
+		color: var(--t2);
+		white-space: nowrap;
+		overflow: hidden;
+		text-overflow: ellipsis;
+	}
+	.ail-reset {
+		font-size: 10px;
+		line-height: 12px;
+		color: var(--t3);
+		font-variant-numeric: tabular-nums;
+	}
+	.ail-tile[data-level='bad'] .ail-reset { color: var(--bad); }
+	.ail-eta {
+		font-size: 10px;
+		line-height: 12px;
+		font-weight: 600;
+		color: var(--warn);
+		white-space: nowrap;
+	}
+	.ail-spark {
+		width: 72px;
+		margin-top: 4px;
+	}
+
+	.ail-accts {
+		display: flex;
+		flex-direction: column;
+		gap: 3px;
+		padding-top: 8px;
+		border-top: 1px solid var(--l1);
+	}
+	.ail-acct {
+		display: flex;
+		align-items: center;
+		gap: 6px;
+		width: 100%;
+		margin: 0 -4px;
+		padding: 1px 4px;
+		border: none;
+		border-radius: 6px;
+		background: transparent;
+		font: inherit;
+		font-size: 11px;
+		line-height: 16px;
+		text-align: left;
+	}
+	.ail-acct:hover { background: var(--l1); }
+	.ail-unpin {
+		width: 18px;
+		height: 18px;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		border: none;
+		border-radius: 9px;
+		background: var(--chip-bg);
+		color: var(--accent);
+	}
+	.ail-unpin:hover { color: var(--t1); }
+	.ail-acct-name {
+		flex: 1 1 auto;
+		min-width: 0;
+		color: var(--t2);
+		white-space: nowrap;
+		overflow: hidden;
+		text-overflow: ellipsis;
+	}
+	.ail-acct-pct {
+		width: 34px;
+		text-align: right;
+		color: var(--t1);
+		font-variant-numeric: tabular-nums;
+	}
+	.ail-acct-reset {
+		width: 46px;
+		text-align: right;
+		color: var(--t3);
+		font-variant-numeric: tabular-nums;
+	}
+	.ail-acct[data-blocked='true'] .ail-acct-name { color: var(--t4); }
+
+	.ail-alerts {
+		display: flex;
+		flex-direction: column;
+		gap: 4px;
+		margin-top: 8px;
+	}
+	.ail-alert {
+		display: flex;
+		align-items: center;
+		gap: 6px;
+		padding: 6px 10px;
+		border-radius: 8px;
+		font-size: 11px;
+		line-height: 15px;
+		background: rgb(from var(--warn) r g b/10%);
+	}
+	.ail-idle { background: var(--l1); }
+	.ail-alert-name {
+		flex: none;
+		font-weight: 600;
+		color: var(--t1);
+	}
+	.ail-alert-text {
+		flex: 1 1 auto;
+		min-width: 0;
+		color: var(--t2);
+		white-space: nowrap;
+		overflow: hidden;
+		text-overflow: ellipsis;
+	}
+	.ail-alert-who {
+		flex: none;
+		color: var(--t3);
+	}
+
+	.ail-empty {
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		gap: 6px;
+		padding: 24px 12px;
+		text-align: center;
+		font-size: 12px;
+		color: var(--t2);
+	}
+	.ail-empty-title {
+		font-weight: 600;
+		color: var(--t1);
+	}
+
+	.ail-dock {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		gap: 8px;
+	}
+	.ail-updated {
+		min-width: 0;
+		font-size: 11px;
+		color: var(--t3);
+		white-space: nowrap;
+		overflow: hidden;
+		text-overflow: ellipsis;
+	}
+	.ail-warn { color: var(--warn); }
+	.ail-actions {
+		flex: none;
+		display: flex;
+		gap: 2px;
+	}
+	.ail-btn {
+		width: 24px;
+		height: 24px;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		border: none;
+		border-radius: 6px;
+		background: transparent;
+		color: var(--t3);
+	}
+	.ail-btn:hover {
+		background: var(--l1);
+		color: var(--t1);
+	}
+}
+
+/* Summary rows for a resting floating card: one line per provider. */
+.ail-root {
+	.ail-summary-rows {
+		display: flex;
+		flex-direction: column;
+		gap: 4px;
+		padding: 2px 0;
+	}
+	.ail-sum {
+		display: flex;
+		align-items: center;
+		gap: 6px;
+		font-size: 11px;
+		line-height: 18px;
+	}
+	.ail-sum .ail-logo {
+		flex: none;
+		width: 16px;
+		height: 16px;
+		background-size: 12px 12px;
+	}
+	.ail-sum .sf-meter { flex: none; }
+	.ail-sum-name {
+		flex: 1 1 auto;
+		min-width: 0;
+		font-weight: 600;
+		color: var(--t1);
+		white-space: nowrap;
+		overflow: hidden;
+		text-overflow: ellipsis;
+	}
+	.ail-sum-win {
+		flex: none;
+		color: var(--t3);
+	}
+	.ail-sum-pct {
+		flex: none;
+		width: 34px;
+		text-align: right;
+		font-weight: 600;
+		color: var(--t1);
+		font-variant-numeric: tabular-nums;
+	}
+	.ail-sum-reset {
+		flex: none;
+		width: 44px;
+		text-align: right;
+		color: var(--t3);
+		font-variant-numeric: tabular-nums;
+	}
+	.ail-sum[data-eta='true'] .ail-sum-reset { color: var(--warn); font-weight: 600; }
+	.ail-sum[data-level='bad'] .ail-sum-pct,
+	.ail-sum[data-level='bad'] .ail-sum-reset { color: var(--bad); }
+	.ail-sum-alert .ail-sum-name { font-weight: 400; color: var(--t2); }
+}
+
+/* Provider logos (monochrome, from CodexBar's provider icons). */
+.ail-root .ail-logo[data-provider='factory-droid'] { background-image: url(icons/factory-droid-light.svg); }
+.ail-root .ail-logo[data-provider='openai-codex'] { background-image: url(icons/openai-codex-light.svg); }
+.ail-root .ail-logo[data-provider='anthropic'] { background-image: url(icons/anthropic-light.svg); }
+.ail-root .ail-logo[data-provider='google-antigravity'] { background-image: url(icons/google-antigravity-light.svg); }
+.ail-root .ail-logo[data-provider='devin'] { background-image: url(icons/devin-light.svg); }
+.ail-root .ail-logo[data-provider='opencode-go'] { background-image: url(icons/opencode-go-light.svg); }
+.ail-root .ail-logo[data-provider='opencode-zen'] { background-image: url(icons/opencode-zen-light.svg); }
+.ail-root .ail-logo[data-provider='google-gemini-cli'] { background-image: url(icons/google-gemini-cli-light.svg); }
+.ail-root .ail-logo[data-provider='github-copilot'] { background-image: url(icons/github-copilot-light.svg); }
+.ail-root .ail-logo[data-provider='cursor'] { background-image: url(icons/cursor-light.svg); }
+.ail-root .ail-logo[data-provider='grok'] { background-image: url(icons/grok-light.svg); }
+.ail-root .ail-logo[data-provider='commandcode'] { background-image: url(icons/commandcode-light.svg); }
+.ail-root .ail-logo[data-provider='zai'] { background-image: url(icons/zai-light.svg); }
+.ail-root .ail-logo[data-provider='kimi'] { background-image: url(icons/kimi-light.svg); }
+.ail-root .ail-logo[data-provider='minimax'] { background-image: url(icons/minimax-light.svg); }
+[data-theme='dark'] .ail-root .ail-logo[data-provider='factory-droid'] { background-image: url(icons/factory-droid-dark.svg); }
+[data-theme='dark'] .ail-root .ail-logo[data-provider='openai-codex'] { background-image: url(icons/openai-codex-dark.svg); }
+[data-theme='dark'] .ail-root .ail-logo[data-provider='anthropic'] { background-image: url(icons/anthropic-dark.svg); }
+[data-theme='dark'] .ail-root .ail-logo[data-provider='google-antigravity'] { background-image: url(icons/google-antigravity-dark.svg); }
+[data-theme='dark'] .ail-root .ail-logo[data-provider='devin'] { background-image: url(icons/devin-dark.svg); }
+[data-theme='dark'] .ail-root .ail-logo[data-provider='opencode-go'] { background-image: url(icons/opencode-go-dark.svg); }
+[data-theme='dark'] .ail-root .ail-logo[data-provider='opencode-zen'] { background-image: url(icons/opencode-zen-dark.svg); }
+[data-theme='dark'] .ail-root .ail-logo[data-provider='google-gemini-cli'] { background-image: url(icons/google-gemini-cli-dark.svg); }
+[data-theme='dark'] .ail-root .ail-logo[data-provider='github-copilot'] { background-image: url(icons/github-copilot-dark.svg); }
+[data-theme='dark'] .ail-root .ail-logo[data-provider='cursor'] { background-image: url(icons/cursor-dark.svg); }
+[data-theme='dark'] .ail-root .ail-logo[data-provider='grok'] { background-image: url(icons/grok-dark.svg); }
+[data-theme='dark'] .ail-root .ail-logo[data-provider='commandcode'] { background-image: url(icons/commandcode-dark.svg); }
+[data-theme='dark'] .ail-root .ail-logo[data-provider='zai'] { background-image: url(icons/zai-dark.svg); }
+[data-theme='dark'] .ail-root .ail-logo[data-provider='kimi'] { background-image: url(icons/kimi-dark.svg); }
+[data-theme='dark'] .ail-root .ail-logo[data-provider='minimax'] { background-image: url(icons/minimax-dark.svg); }
+
+/* Layout variants: side column, the "Limites" tab, the lens. */
+.ail-root {
+	/* Tern's scrollbar floats over the right edge of the region; keep it off
+	   the cards. */
+	&.ail-panel { padding-right: 10px; }
+	/* Cards wrap by the block's real width: one column in a narrow panel, as
+	   many as fit when it is wide (a big column, a focused or expanded card). */
+	&.ail-panel .ail-card { flex: 1 1 240px; max-width: 520px; }
+
+	&.ail-dashboard {
+		--ail-ring: 52px;
+		padding: 12px 16px 16px;
+		display: flex;
+		flex-direction: column;
+		gap: 14px;
+	}
+	&.ail-dashboard .ail-grid { gap: 12px; }
+	&.ail-dashboard .ail-card {
+		flex: 1 1 300px;
+		padding: 14px 16px 16px;
+		gap: 12px;
+	}
+	&.ail-dashboard .ail-pct { font-size: 12px; }
+	&.ail-dashboard .ail-rings { gap: 10px 22px; }
+
+	.ail-dash-head {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		gap: 12px;
+	}
+	.ail-dash-title {
+		font-size: 18px;
+		line-height: 24px;
+		font-weight: 600;
+		color: var(--t1);
+	}
+	.ail-acct-block {
+		display: flex;
+		flex-direction: column;
+		gap: 8px;
+	}
+	.ail-acct-block + .ail-acct-block {
+		padding-top: 10px;
+		border-top: 1px solid var(--l1);
+	}
+	.ail-acct-head {
+		display: flex;
+		align-items: center;
+		gap: 6px;
+		font-size: 11px;
+	}
+
+	&.ail-lens { padding: 4px 0; }
+	&.ail-lens .ail-card { flex-basis: 240px; }
+
+	.ail-note {
+		display: block;
+		margin-top: 8px;
+		font-size: 11px;
+		color: var(--t3);
+	}
+}
+
+/* Dense layout: one row per limit window (density "lines"). */
+.ail-root {
+	.ail-lines {
+		display: flex;
+		flex-direction: column;
+		gap: 3px;
+	}
+	.ail-line {
+		display: flex;
+		align-items: center;
+		gap: 8px;
+		font-size: 11px;
+		line-height: 18px;
+	}
+	.ail-line .sf-meter { flex: none; }
+	.ail-line-name {
+		flex: 1 1 auto;
+		min-width: 0;
+		color: var(--t2);
+		white-space: nowrap;
+		overflow: hidden;
+		text-overflow: ellipsis;
+	}
+	.ail-line-pct {
+		width: 36px;
+		text-align: right;
+		font-weight: 600;
+		color: var(--t1);
+		font-variant-numeric: tabular-nums;
+	}
+	.ail-line-reset {
+		width: 48px;
+		text-align: right;
+		color: var(--t3);
+		font-variant-numeric: tabular-nums;
+	}
+	.ail-line[data-level='bad'] .ail-line-reset { color: var(--bad); }
+	.ail-line[data-eta='true'] .ail-line-reset { color: var(--warn); font-weight: 600; }
+}
+
+/* The one rule outside .ail-root. Tern tilts a resting PiP card in 3D
+   (an inline matrix3d), and the resampling blurs its text. Plugin sheets
+   have no :has(), so this flattens every resting card, not only ours. */
+.tn-pane.pip.pip-glance {
+	transform: none !important;
+}
