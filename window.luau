@@ -17,6 +17,11 @@
 -- Focus, pane and tab events place the panel at once; the loop only catches
 -- what no event reports (a parked panel dealt back, a host reload).
 local LOOP_MS = 5000
+
+local PT = tern.kv.get("lang") == "pt"
+local function t(en: string, pt: string): string
+	return if PT then pt else en
+end
 local BEAT_MS = 10 * 1000
 
 local core: any = nil
@@ -76,57 +81,58 @@ local function in_settings(name: string): (WindowCx) -> ()
 end
 
 local COMMANDS: { Command } = {
-	{ id = "toggle", title = "Limites de IA: mostrar/ocultar painel", icon = "sidebar", run = in_core("toggle") },
+	{ id = "toggle", title = t("AI Limits: show/hide panel", "Limites de IA: mostrar/ocultar painel"), icon = "sidebar", run = in_core("toggle") },
 	{
 		id = "show",
-		title = "Limites de IA: mostrar painel",
+		title = t("AI Limits: show panel", "Limites de IA: mostrar painel"),
 		icon = "sidebar",
 		run = function(cx: WindowCx)
 			local c = need_core()
 			c.show(cx, c.mode() == "drawer")
 		end,
 	},
-	{ id = "hide", title = "Limites de IA: ocultar painel", icon = "eye-off", run = in_core("hide") },
-	{ id = "dashboard", title = "Limites de IA: abrir aba Limites", icon = "gauge", run = in_core("open_dashboard") },
+	{ id = "hide", title = t("AI Limits: hide panel", "Limites de IA: ocultar painel"), icon = "eye-off", run = in_core("hide") },
+	{ id = "dashboard", title = t("AI Limits: open the Limits tab", "Limites de IA: abrir aba Limites"), icon = "gauge", run = in_core("open_dashboard") },
 	{
 		id = "peek",
-		title = "Limites de IA: espiar",
+		title = t("AI Limits: peek", "Limites de IA: espiar"),
 		icon = "eye",
 		run = function(cx: WindowCx)
 			need_alerts().peek(cx, need_core().open_dashboard)
 		end,
 	},
-	{ id = "configure", title = "Limites de IA: configurar…", icon = "sliders", run = in_settings("configure") },
-	{ id = "refresh", title = "Limites de IA: atualizar agora", icon = "redo", run = in_settings("refresh") },
-	{ id = "mode", title = "Limites de IA: modo do painel", icon = "sidebar", run = in_settings("mode") },
-	{ id = "side", title = "Limites de IA: lado da coluna", icon = "columns", run = in_settings("side") },
-	{ id = "width", title = "Limites de IA: largura da coluna", icon = "columns", run = in_settings("width") },
-	{ id = "corner", title = "Limites de IA: canto do cartão flutuante", icon = "pip", run = in_settings("corner") },
+	{ id = "configure", title = t("AI Limits: settings…", "Limites de IA: configurar…"), icon = "sliders", run = in_settings("configure") },
+	{ id = "refresh", title = t("AI Limits: refresh now", "Limites de IA: atualizar agora"), icon = "redo", run = in_settings("refresh") },
+	{ id = "mode", title = t("AI Limits: panel mode", "Limites de IA: modo do painel"), icon = "sidebar", run = in_settings("mode") },
+	{ id = "side", title = t("AI Limits: column side", "Limites de IA: lado da coluna"), icon = "columns", run = in_settings("side") },
+	{ id = "width", title = t("AI Limits: column width", "Limites de IA: largura da coluna"), icon = "columns", run = in_settings("width") },
+	{ id = "corner", title = t("AI Limits: floating card corner", "Limites de IA: canto do cartão flutuante"), icon = "pip", run = in_settings("corner") },
 	{
 		id = "pip_show",
-		title = "Limites de IA: conteúdo do cartão flutuante",
+		title = t("AI Limits: floating card content", "Limites de IA: conteúdo do cartão flutuante"),
 		icon = "pip",
 		run = in_settings("pip_show"),
 	},
-	{ id = "providers", title = "Limites de IA: escolher providers", icon = "eye", run = in_filters("providers") },
+	{ id = "providers", title = t("AI Limits: choose providers", "Limites de IA: escolher providers"), icon = "eye", run = in_filters("providers") },
 	{
 		id = "windows",
-		title = "Limites de IA: escolher janelas (5h, semanal, mensal…)",
+		title = t("AI Limits: choose windows (5h, weekly, monthly…)", "Limites de IA: escolher janelas (5h, semanal, mensal…)"),
 		icon = "clock",
 		run = in_filters("windows"),
 	},
-	{ id = "accounts", title = "Limites de IA: escolher contas", icon = "user", run = in_filters("accounts") },
-	{ id = "order", title = "Limites de IA: ordem dos providers", icon = "list", run = in_filters("order") },
-	{ id = "density", title = "Limites de IA: densidade dos cartões", icon = "grid", run = in_filters("density") },
-	{ id = "status", title = "Limites de IA: barra de status", icon = "activity", run = in_settings("status") },
-	{ id = "poll", title = "Limites de IA: frequência de atualização", icon = "clock", run = in_settings("poll") },
-	{ id = "sources", title = "Limites de IA: de onde vêm os limites", icon = "plug", run = in_settings("sources") },
-	{ id = "keys", title = "Limites de IA: chaves de API", icon = "key", run = in_settings("keys") },
-	{ id = "alerts", title = "Limites de IA: avisos de limite", icon = "bell", run = in_settings("alerts") },
+	{ id = "accounts", title = t("AI Limits: choose accounts", "Limites de IA: escolher contas"), icon = "user", run = in_filters("accounts") },
+	{ id = "order", title = t("AI Limits: provider order", "Limites de IA: ordem dos providers"), icon = "list", run = in_filters("order") },
+	{ id = "density", title = t("AI Limits: card density", "Limites de IA: densidade dos cartões"), icon = "grid", run = in_filters("density") },
+	{ id = "status", title = t("AI Limits: status bar", "Limites de IA: barra de status"), icon = "activity", run = in_settings("status") },
+	{ id = "poll", title = t("AI Limits: refresh interval", "Limites de IA: frequência de atualização"), icon = "clock", run = in_settings("poll") },
+	{ id = "sources", title = t("AI Limits: where limits come from", "Limites de IA: de onde vêm os limites"), icon = "plug", run = in_settings("sources") },
+	{ id = "keys", title = t("AI Limits: API keys", "Limites de IA: chaves de API"), icon = "key", run = in_settings("keys") },
+	{ id = "alerts", title = t("AI Limits: limit alerts", "Limites de IA: avisos de limite"), icon = "bell", run = in_settings("alerts") },
+	{ id = "lang", title = t("AI Limits: language", "Limites de IA: idioma"), icon = "globe", run = in_settings("lang") },
 }
 
 for _, c in COMMANDS do
-	tern.command({ id = c.id, title = c.title, icon = c.icon, run = c.run })
+	tern.command({ id = c.id, title = c.title, icon = c.icon, group = t("AI Limits", "Limites de IA"), run = c.run })
 end
 
 local ctrl = if tern.runtime.os == "macos" then "cmd" else "ctrl"

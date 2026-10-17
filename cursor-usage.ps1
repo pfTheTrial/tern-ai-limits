@@ -1,7 +1,9 @@
-# Cursor usage for the AI Limits plugin, printed as an `omp usage --json`
+﻿# Cursor usage for the AI Limits plugin, printed as an `omp usage --json`
 # document so the plugin's model reads it like omp's reports. The session is
 # read, never written, and the token only goes to Cursor's own API.
 $ErrorActionPreference = 'Stop'
+# Messages follow the plugin's language (AI_LIMITS_LANG, set by the host).
+function T([string]$en, [string]$pt) { if ($env:AI_LIMITS_LANG -eq 'pt') { $pt } else { $en } }
 
 function Out-Doc($reports, $disabled) {
 	$doc = @{ reports = @($reports); disabledCredentials = @($disabled); generatedAt = [DateTimeOffset]::UtcNow.ToUnixTimeMilliseconds() }
@@ -92,16 +94,16 @@ if (-not (Test-Path -LiteralPath $db) -and -not (Test-Path -LiteralPath $cliAuth
 }
 if ($email) { $email = $email.Trim().Trim('"') }
 if ($membership) { $membership = $membership.Trim().Trim('"') }
-if (-not $token) { Out-Problem 'Cursor sem login: entre no app ou rode cursor-agent login' $email }
+if (-not $token) { Out-Problem (T 'Cursor is not logged in: sign in to the app or run cursor-agent login' 'Cursor sem login: entre no app ou rode cursor-agent login') $email }
 $token = $token.Trim().Trim('"')
 
 $parts = $token.Split('.')
-if ($parts.Count -lt 2) { Out-Problem 'login do Cursor ilegível' $email }
+if ($parts.Count -lt 2) { Out-Problem (T 'unreadable Cursor login' 'login do Cursor ilegível') $email }
 $p = $parts[1].Replace('-', '+').Replace('_', '/')
 switch ($p.Length % 4) { 2 { $p += '==' } 3 { $p += '=' } }
 $claims = [Text.Encoding]::UTF8.GetString([Convert]::FromBase64String($p)) | ConvertFrom-Json
 if ($claims.exp -and [long]$claims.exp -lt [DateTimeOffset]::UtcNow.ToUnixTimeSeconds() + 60) {
-	Out-Problem 'login do Cursor expirado: abra o app ou rode cursor-agent login' $email
+	Out-Problem (T 'Cursor login expired: open the app or run cursor-agent login' 'login do Cursor expirado: abra o app ou rode cursor-agent login') $email
 }
 $user = ([string]$claims.sub).Split('|')[-1]
 
@@ -119,8 +121,8 @@ try {
 } catch {
 	$code = $null
 	if ($_.Exception.Response) { $code = [int]$_.Exception.Response.StatusCode }
-	if ($code -eq 401 -or $code -eq 403) { Out-Problem 'o Cursor recusou o login: abra o app ou rode cursor-agent login' $email }
-	Out-Problem "o Cursor não respondeu ($code)" $email
+	if ($code -eq 401 -or $code -eq 403) { Out-Problem (T 'Cursor rejected the login: open the app or run cursor-agent login' 'o Cursor recusou o login: abra o app ou rode cursor-agent login') $email }
+	Out-Problem (T "Cursor did not answer ($code)" "o Cursor não respondeu ($code)") $email
 }
 try { $planName = (Call 'GetPlanInfo').planInfo.planName } catch { $planName = $null }
 if (-not $planName) { $planName = $membership }
@@ -147,6 +149,6 @@ $spend = $u.spendLimitUsage
 if ($spend -and $spend.individualLimit -gt 0 -and $null -ne $spend.individualUsed) {
 	$limits += @{ label = 'On-demand (US$)'; window = $window; amount = @{ used = [Math]::Round([double]$spend.individualUsed / 100, 2); limit = [Math]::Round([double]$spend.individualLimit / 100, 2) } }
 }
-if ($limits.Count -eq 0) { Out-Problem 'o Cursor não informou o uso deste ciclo' $email }
+if ($limits.Count -eq 0) { Out-Problem (T 'Cursor did not report this cycle''s usage' 'o Cursor não informou o uso deste ciclo') $email }
 
 Out-Doc @(@{ provider = 'cursor'; metadata = @{ email = $email; accountId = $user; planType = $planName }; limits = $limits }) @()

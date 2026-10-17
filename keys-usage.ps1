@@ -1,9 +1,11 @@
-# Usage for providers that work with an API key, for the AI Limits plugin,
+﻿# Usage for providers that work with an API key, for the AI Limits plugin,
 # printed as one `omp usage --json` document. Keys come from what the user saved
 # with "Limites de IA: chaves de API" (the plugin's Windows Credential Manager
 # entries) or from each provider's own environment variable; they only go to
 # that provider's API.
 $ErrorActionPreference = 'Stop'
+# Messages follow the plugin's language (AI_LIMITS_LANG, set by the host).
+function T([string]$en, [string]$pt) { if ($env:AI_LIMITS_LANG -eq 'pt') { $pt } else { $en } }
 [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
 
 $reports = New-Object System.Collections.Generic.List[object]
@@ -104,11 +106,11 @@ if ($factory) {
 		if ($limits.Count -gt 0) {
 			$reports.Add(@{ provider = 'factory-droid'; metadata = @{ accountId = 'api-key' }; limits = $limits.ToArray() })
 		} else {
-			Problem 'factory-droid' 'a conta da Factory não usa limites por janela'
+			Problem 'factory-droid' (T 'this Factory account has no window limits' 'a conta da Factory não usa limites por janela')
 		}
 	} catch {
 		$c = Status $_
-		Problem 'factory-droid' $(if ($c -eq 401 -or $c -eq 403) { 'a Factory recusou a chave de API' } else { "a Factory não respondeu ($c)" })
+		Problem 'factory-droid' $(if ($c -eq 401 -or $c -eq 403) { (T 'Factory rejected the API key' 'a Factory recusou a chave de API') } else { (T "Factory did not answer ($c)" "a Factory não respondeu ($c)") })
 	}
 }
 
@@ -132,11 +134,11 @@ if ($opencode) {
 		if ($limits.Count -gt 0) {
 			$reports.Add(@{ provider = 'opencode-go'; metadata = @{ accountId = 'api-key' }; limits = $limits.ToArray() })
 		} else {
-			Problem 'opencode-go' 'o OpenCode Go não informou o uso'
+			Problem 'opencode-go' (T 'OpenCode Go did not report usage' 'o OpenCode Go não informou o uso')
 		}
 	} catch {
 		$c = Status $_
-		Problem 'opencode-go' $(if ($c -eq 401 -or $c -eq 403) { 'o OpenCode recusou a chave de API' } else { "o OpenCode não respondeu ($c)" })
+		Problem 'opencode-go' $(if ($c -eq 401 -or $c -eq 403) { (T 'OpenCode rejected the API key' 'o OpenCode recusou a chave de API') } else { (T "OpenCode did not answer ($c)" "o OpenCode não respondeu ($c)") })
 	}
 }
 
@@ -163,11 +165,11 @@ if ($cmdcode) {
 		if ($limits.Count -gt 0) {
 			$reports.Add(@{ provider = 'commandcode'; metadata = @{ accountId = 'api-key' }; limits = $limits.ToArray() })
 		} else {
-			Problem 'commandcode' 'o Command Code não informou limites'
+			Problem 'commandcode' (T 'Command Code did not report limits' 'o Command Code não informou limites')
 		}
 	} catch {
 		$c = Status $_
-		Problem 'commandcode' $(if ($c -eq 401 -or $c -eq 403) { 'o Command Code recusou a chave de API' } else { "o Command Code não respondeu ($c)" })
+		Problem 'commandcode' $(if ($c -eq 401 -or $c -eq 403) { (T 'Command Code rejected the API key' 'o Command Code recusou a chave de API') } else { (T "Command Code did not answer ($c)" "o Command Code não respondeu ($c)") })
 	}
 }
 

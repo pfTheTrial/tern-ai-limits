@@ -2,7 +2,7 @@
 
 A Tern plugin that shows how much of your AI coding plans you have left: every limit window (5-hour, weekly, monthly, plan period) as a ring, with the time until it resets. It lives in a side column, a drawer, a floating card, its own tab, the status bar and the window title, and it can warn you before a limit runs out.
 
-The interface is in Brazilian Portuguese.
+The interface is in English, with Brazilian Portuguese as an option (**AI Limits: language**).
 
 ## Providers
 
@@ -31,7 +31,7 @@ omp is optional. Without it, the plugin reads each tool's own login directly. Th
 tern plugin install github.com/pfTheTrial/tern-ai-limits
 ```
 
-Tern reloads its plugins and the **Limites de IA** column opens at the right edge of the active tab.
+Tern reloads its plugins and the **AI Limits** column opens at the right edge of the active tab.
 
 To work on a local copy instead, clone the repository and link it:
 
@@ -47,20 +47,22 @@ Check that it loaded with `tern plugin list`. It should report `ai-limits ... re
 Log in with the tools you use, then wait for the next refresh or press `r` in the panel:
 
 - **Claude Code:** run `claude` and use `/login`.
-- **Codex:** run `codex` and log in. Expired logins show as *login expirado*; open the CLI once and it renews itself.
+- **Codex:** run `codex` and log in. An expired login shows as *Codex login expired*; open the CLI once and it renews itself.
 - **Cursor:** sign in to the Cursor app, or run `cursor-agent login`.
 - **Grok:** run `grok login`.
-- **Factory, OpenCode Go, Command Code:** open the command palette, run **Limites de IA: chaves de API**, pick the provider and paste the key. Leave the field empty to delete a saved key. Keys are kept in the Windows Credential Manager through Tern's secret store. The key is visible while you type it. Environment variables also work: `FACTORY_API_KEY`, `OPENCODE_API_KEY`, `COMMANDCODE_API_KEY`.
+- **Factory, OpenCode Go, Command Code:** open the command palette, run **AI Limits: API keys**, pick the provider and paste the key. Leave the field empty to delete a saved key. Keys are kept in the Windows Credential Manager through Tern's secret store. The key is visible while you type it. Environment variables also work: `FACTORY_API_KEY`, `OPENCODE_API_KEY`, `COMMANDCODE_API_KEY`.
 - **Everything else:** `omp login <provider>`.
 
-To stop using omp even when it is installed, run **Limites de IA: de onde vêm os limites** and choose *Só leitura direta*.
+To stop using omp even when it is installed, run **AI Limits: where limits come from** and choose *Direct reading only, no omp*.
 
 ## Use it
+
+Every action is in Tern's command palette: press `Ctrl+Shift+P` and type **ai limits** (or **limites de ia** when the interface is in Portuguese) to list them all.
 
 | Shortcut | Does |
 | --- | --- |
 | `Ctrl+Alt+Shift+U` | Show or hide the panel |
-| `Ctrl+Alt+Shift+I` | Open the **Limites** tab, with every account and the last day of usage |
+| `Ctrl+Alt+Shift+I` | Open the **Limits** tab, with every account and the last day of usage |
 | `Ctrl+Alt+Shift+Y` | Peek: every account in the palette |
 
 Inside the panel: `r` refreshes, `e` hides or shows e-mails, `c` opens the settings.
@@ -72,20 +74,21 @@ Inside the panel: `r` refreshes, `e` hides or shows e-mails, `c` opens the setti
 
 ## Settings
 
-Everything is in the palette under **Limites de IA: configurar…** (or the sliders icon at the bottom of the panel):
+Everything is in the palette under **AI Limits: settings…** (or the sliders icon at the bottom of the panel):
 
-- **Modo do painel**: column, drawer, floating card or off.
-- **Providers, janelas, contas, ordem**: hide providers, limit windows or accounts, and choose the order.
-- **Densidade**: rings, or a compact list. Narrow columns use the list automatically.
-- **Barra de status**: every provider, only those past 70%, or the first three.
-- **Frequência de atualização**: every 1 to 30 minutes (default 5).
-- **Avisos de limite**: toasts at 50/70/80/90%, when a limit runs out, when it resets, when the recent pace will exhaust it before the reset, and when a login breaks.
-- **Conteúdo do cartão flutuante**, **lado** and **largura da coluna**, **canto do cartão**.
-- **De onde vêm os limites** and **chaves de API**, described above.
+- **Language**: English or Português (Brasil). Switching reloads the plugin.
+- **Panel mode**: column, drawer, floating card or off.
+- **Providers, windows, accounts, order**: hide providers, limit windows or accounts, and choose the order.
+- **Card density**: rings, or a compact list. Narrow columns use the list automatically.
+- **Status bar**: every provider, only those past 70%, or the first three.
+- **Refresh interval**: every 1 to 30 minutes (default 5).
+- **Limit alerts**: toasts at 50/70/80/90%, when a limit runs out, when it resets, when the recent pace will exhaust it before the reset, and when a login breaks.
+- **Floating card content**, **column side** and **width**, **floating card corner**.
+- **Where limits come from** and **API keys**, described above.
 
 ## History and pace
 
-The plugin keeps one reading per limit window per hour, for a week, in `history.json` in its data folder. The **Limites** tab draws the last 24 hours as a sparkline. When the pace of the last few hours would use a limit up before it resets, the card says *esgota em 3h* ("runs out in 3h"), and a toast tells you once.
+The plugin keeps one reading per limit window per hour, for a week, in `history.json` in its data folder. The **Limits** tab draws the last 24 hours as a sparkline. When the pace of the last few hours would use a limit up before it resets, the card says *runs out in 3h*, and a toast tells you once.
 
 ## Uninstall
 
@@ -93,7 +96,7 @@ The plugin keeps one reading per limit window per hour, for a week, in `history.
 tern plugin remove ai-limits
 ```
 
-Saved API keys stay in the Windows Credential Manager under `so.stencil.tern/plugin.ai-limits.*`. Delete them from there, or with **Limites de IA: chaves de API** before removing the plugin.
+Saved API keys stay in the Windows Credential Manager under `so.stencil.tern/plugin.ai-limits.*`. Delete them from there, or with **AI Limits: API keys** before removing the plugin.
 
 ## Notes
 

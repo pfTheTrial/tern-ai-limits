@@ -2,6 +2,11 @@
 -- AI Limits, window half: the palette peek, the status line and window title
 -- summaries, and toasts when limits cross thresholds.
 
+local PT = tern.kv.get("lang") == "pt"
+local function t(en: string, pt: string): string
+	return if PT then pt else en
+end
+
 local M = {}
 
 local TOGGLE = "plugin.ai-limits.toggle"
@@ -57,14 +62,14 @@ local function window_label(provider: any, account: any, family: any, w: any): s
 	if family.name ~= "" and #account.families > 1 then
 		label ..= " · " .. family.name
 	end
-	return label .. " · " .. w.short
+	return label .. " · " .. (if w.short == "plano" then t("plan", "plano") else w.short)
 end
 
 -- Palette peek; `open_dashboard` comes from win_core.
 function M.peek(cx: WindowCx, open_dashboard: (WindowCx) -> ())
 	local snap = tern.kv.get("snapshot")
 	if type(snap) ~= "table" or type(snap.providers) ~= "table" then
-		cx:toast("info", "Ainda sem dados de limites", "O omp usage roda em segundo plano.")
+		cx:toast("info", t("No limits data yet", "Ainda sem dados de limites"), t("Usage is being read in the background.", "O omp usage roda em segundo plano."))
 		return
 	end
 	local now_ms = os.time() * 1000
@@ -74,7 +79,7 @@ function M.peek(cx: WindowCx, open_dashboard: (WindowCx) -> ())
 			local parts: { string } = {}
 			for _, family in account.families do
 				for _, w in family.windows do
-					local text = w.short .. " " .. w.text
+					local text = (if w.short == "plano" then t("plan", "plano") else w.short) .. " " .. w.text
 					if family.name ~= "" and #account.families > 1 then
 						text = family.name .. " " .. text
 					end
@@ -97,12 +102,12 @@ function M.peek(cx: WindowCx, open_dashboard: (WindowCx) -> ())
 		table.insert(items, {
 			label = item.name .. (if item.email then " · " .. who(item.email) else ""),
 			detail = item.cause,
-			group = "Logins com problema",
+			group = t("Logins with problems", "Logins com problema"),
 			icon = "warn",
 			dashboard = true,
 		})
 	end
-	cx:pick({ items = items, placeholder = "Limites de IA", icon = "gauge", action = "abrir aba Limites" })
+	cx:pick({ items = items, placeholder = t("AI Limits", "Limites de IA"), icon = "gauge", action = t("open the Limits tab", "abrir aba Limites") })
 		:next(function(choice, _err, later)
 			if choice and later then
 				open_dashboard(later :: WindowCx)
@@ -184,17 +189,17 @@ local function check_alerts(cx: WindowCx, snap: any)
 			if b == 100 then
 				table.insert(toasts, {
 					level = "error",
-					text = labels[key] .. " esgotou",
-					sub = "Troque de conta ou espere o reset.",
+					text = labels[key] .. t(" ran out", " esgotou"),
+					sub = t("Switch accounts or wait for the reset.", "Troque de conta ou espere o reset."),
 				})
 			else
 				table.insert(toasts, {
 					level = if b >= 90 then "error" else "info",
-					text = labels[key] .. " passou de " .. b .. "%",
+					text = labels[key] .. t(" passed ", " passou de ") .. b .. "%",
 				})
 			end
 		elseif before > 0 and b == 0 and on.reset then
-			table.insert(toasts, { level = "success", text = labels[key] .. " resetou" })
+			table.insert(toasts, { level = "success", text = labels[key] .. t(" reset", " resetou") })
 		end
 	end
 	-- A window starts heading to run out before its reset (history.luau's eta).
@@ -203,22 +208,22 @@ local function check_alerts(cx: WindowCx, snap: any)
 		if pe[key] == nil and on.eta and (buckets[key] or 0) < 100 then
 			table.insert(toasts, {
 				level = "info",
-				text = labels[key] .. " deve esgotar em " .. until_text(eta, now_ms),
-				sub = "No ritmo das últimas horas, antes do reset.",
+				text = labels[key] .. t(" should run out in ", " deve esgotar em ") .. until_text(eta, now_ms),
+				sub = t("At the pace of the last hours, before the reset.", "No ritmo das últimas horas, antes do reset."),
 			})
 		end
 	end
 	for key, cause in disabled do
 		if pd[key] == nil and on.login then
-			table.insert(toasts, { level = "error", text = "Login com problema: " .. disabled_names[key], sub = cause })
+			table.insert(toasts, { level = "error", text = t("Login problem: ", "Login com problema: ") .. disabled_names[key], sub = cause })
 		end
 	end
-	for i, t in toasts do
+	for i, toast in toasts do
 		if i > MAX_TOASTS then
-			cx:toast("info", string.format("Mais %d avisos de limite", #toasts - MAX_TOASTS), "Veja a aba Limites.")
+			cx:toast("info", string.format(t("%d more limit alerts", "Mais %d avisos de limite"), #toasts - MAX_TOASTS), t("See the Limits tab.", "Veja a aba Limites."))
 			break
 		end
-		cx:toast(t.level, t.text, t.sub)
+		cx:toast(toast.level, toast.text, toast.sub)
 	end
 end
 
@@ -256,7 +261,7 @@ local function build(snap: any)
 	end
 	if #segments == 0 and #snap.providers > 0 then
 		-- Nothing in alert: keep one quiet segment as the way into the panel.
-		table.insert(segments, { text = "IA ok", icon = "gauge", tone = "ok", command = TOGGLE })
+		table.insert(segments, { text = t("AI ok", "IA ok"), icon = "gauge", tone = "ok", command = TOGGLE })
 	end
 	if #alerting > 0 then
 		title_alert = table.concat(alerting, " · ")

@@ -6,6 +6,11 @@
 -- grok-usage.ps1), which print documents of the same shape; the host merges
 -- their reports into omp's before normalizing.
 
+local PT = tern.kv.get("lang") == "pt"
+local function t(en: string, pt: string): string
+	return if PT then pt else en
+end
+
 local model = {}
 
 export type Window = {
@@ -177,7 +182,7 @@ end
 -- What a refresh failure means to someone reading the card.
 function model.cause(text: string): string
 	if string.find(text, "invalid_grant", 1, true) or string.find(text, "refresh", 1, true) then
-		return "login expirado: rode omp login"
+		return t("login expired: run omp login", "login expirado: rode omp login")
 	end
 	local first = string.match(text, "^[^\n]*") or text
 	return if #first > 90 then string.sub(first, 1, 89) .. "…" else first

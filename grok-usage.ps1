@@ -1,7 +1,9 @@
-# Grok usage for the AI Limits plugin, printed as an `omp usage --json`
+﻿# Grok usage for the AI Limits plugin, printed as an `omp usage --json`
 # document. The token is the one `grok login` keeps in ~/.grok/auth.json; it
 # only goes to xAI's Grok CLI billing endpoint.
 $ErrorActionPreference = 'Stop'
+# Messages follow the plugin's language (AI_LIMITS_LANG, set by the host).
+function T([string]$en, [string]$pt) { if ($env:AI_LIMITS_LANG -eq 'pt') { $pt } else { $en } }
 
 function Out-Doc($reports, $disabled) {
 	$doc = @{ reports = @($reports); disabledCredentials = @($disabled); generatedAt = [DateTimeOffset]::UtcNow.ToUnixTimeMilliseconds() }
@@ -29,12 +31,12 @@ foreach ($prop in $root.PSObject.Properties) {
 	if ($prop.Name.StartsWith('https://auth.x.ai::')) { $entry = $e; break }
 	if (-not $entry -and $prop.Name -like '*/sign-in*') { $entry = $e }
 }
-if (-not $entry) { Out-Problem 'Grok sem login: rode grok login' $null }
+if (-not $entry) { Out-Problem (T 'Grok is not logged in: run grok login' 'Grok sem login: rode grok login') $null }
 $email = $entry.email
 if ($entry.expires_at) {
 	try {
 		if ([DateTimeOffset]::Parse($entry.expires_at) -le [DateTimeOffset]::UtcNow) {
-			Out-Problem 'login do Grok expirado: rode grok login' $email
+			Out-Problem (T 'Grok login expired: run grok login' 'login do Grok expirado: rode grok login') $email
 		}
 	} catch {}
 }
@@ -46,8 +48,8 @@ try {
 } catch {
 	$code = $null
 	if ($_.Exception.Response) { $code = [int]$_.Exception.Response.StatusCode }
-	if ($code -eq 401 -or $code -eq 403) { Out-Problem 'xAI recusou o login: rode grok login' $email }
-	Out-Problem "xAI não respondeu ($code)" $email
+	if ($code -eq 401 -or $code -eq 403) { Out-Problem (T 'xAI rejected the login: run grok login' 'xAI recusou o login: rode grok login') $email }
+	Out-Problem (T "xAI did not answer ($code)" "xAI não respondeu ($code)") $email
 }
 
 $c = $r.config
@@ -81,7 +83,7 @@ $tier = $c.subscriptionTier
 if (-not $tier) { $tier = $r.subscriptionTier }
 $report = @{ provider = 'grok'; metadata = @{ email = $email; accountId = $entry.user_id; planType = $tier }; limits = $limits }
 if ($limits.Count -eq 0) {
-	Out-Doc @() @(@{ provider = 'grok'; email = $email; cause = 'o Grok não informou o uso deste período' })
+	Out-Doc @() @(@{ provider = 'grok'; email = $email; cause = (T 'Grok did not report this period''s usage' 'o Grok não informou o uso deste período') })
 	exit 0
 }
 Out-Doc @($report) @()

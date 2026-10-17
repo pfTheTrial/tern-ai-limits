@@ -3,6 +3,11 @@
 -- on first use, apart from win_settings, so neither file's compile nears the
 -- 50 ms a window hook gets.
 
+local PT = tern.kv.get("lang") == "pt"
+local function t(en: string, pt: string): string
+	return if PT then pt else en
+end
+
 -- Loaded at startup by window.luau, so requiring it here costs nothing.
 local who = require("./win_alerts").who
 
@@ -12,18 +17,18 @@ local M = {}
 -- re-filters and republishes.
 
 local WINDOW_NAMES: { [string]: string } = {
-	["1h"] = "1 hora",
-	["5h"] = "5 horas",
-	["1d"] = "Diária",
-	["7d"] = "Semanal",
-	["30d"] = "Mensal",
-	plano = "Período do plano",
+	["1h"] = t("1 hour", "1 hora"),
+	["5h"] = t("5 hours", "5 horas"),
+	["1d"] = t("Daily", "Diária"),
+	["7d"] = t("Weekly", "Semanal"),
+	["30d"] = t("Monthly", "Mensal"),
+	plano = t("Plan period", "Período do plano"),
 }
 local WINDOW_ORDER = { "1h", "5h", "1d", "7d", "30d", "plano" }
 
 local DENSITIES: { [string]: string } = {
-	auto = "Anéis (padrão)",
-	lines = "Lista compacta (uma linha por cota)",
+	auto = t("Rings (default)", "Anéis (padrão)"),
+	lines = t("Compact list (one row per limit)", "Lista compacta (uma linha por cota)"),
 }
 local DENSITY_ORDER = { "auto", "lines" }
 
@@ -72,7 +77,7 @@ local function all_snapshot(cx: WindowCx): any
 		snap = tern.kv.get("snapshot")
 	end
 	if type(snap) ~= "table" or type(snap.providers) ~= "table" then
-		cx:toast("info", "Ainda sem dados de limites", "O omp usage roda em segundo plano.")
+		cx:toast("info", t("No limits data yet", "Ainda sem dados de limites"), t("Usage is being read in the background.", "O omp usage roda em segundo plano."))
 		return nil
 	end
 	return snap
@@ -83,13 +88,13 @@ end
 local function toggle_pick(cx: WindowCx, title: string, icon: string, key: string, items: () -> { PickItem })
 	local function step(lcx: WindowCx)
 		local list: { PickItem } = {
-			{ label = "Concluir", id = "__done", icon = "check" },
-			{ label = "Mostrar todos", id = "__reset", icon = "eye" },
+			{ label = t("Done", "Concluir"), id = "__done", icon = "check" },
+			{ label = t("Show all", "Mostrar todos"), id = "__reset", icon = "eye" },
 		}
 		for _, item in items() do
 			table.insert(list, item)
 		end
-		lcx:pick({ items = list, placeholder = title, icon = icon, action = "mostrar/ocultar" })
+		lcx:pick({ items = list, placeholder = title, icon = icon, action = t("show/hide", "mostrar/ocultar") })
 			:next(function(choice, _err, later)
 				if choice == nil or later == nil or choice.id == "__done" then
 					return
@@ -109,7 +114,7 @@ end
 local function visibility(item: PickItem, hidden: boolean): PickItem
 	item.current = not hidden
 	item.icon = if hidden then "eye-off" else "eye"
-	item.detail = if hidden then "oculto" else item.detail
+	item.detail = if hidden then t("hidden", "oculto") else item.detail
 	return item
 end
 
@@ -118,7 +123,7 @@ function M.providers(cx: WindowCx)
 	if snap == nil then
 		return
 	end
-	toggle_pick(cx, "Providers mostrados (↵ alterna)", "eye", "hide_providers", function()
+	toggle_pick(cx, t("Providers shown (↵ toggles)", "Providers mostrados (↵ alterna)"), "eye", "hide_providers", function()
 		local hidden = kv_set("hide_providers")
 		local items: { PickItem } = {}
 		for _, p in snap.providers do
@@ -126,7 +131,7 @@ function M.providers(cx: WindowCx)
 			table.insert(items, visibility({
 				label = tostring(p.name),
 				id = p.id,
-				detail = if n == 1 then "1 conta" else n .. " contas",
+				detail = if n == 1 then t("1 account", "1 conta") else n .. t(" accounts", " contas"),
 			}, hidden[p.id] == true))
 		end
 		return items
@@ -159,14 +164,14 @@ function M.windows(cx: WindowCx)
 			table.insert(shorts, s)
 		end
 	end
-	toggle_pick(cx, "Janelas mostradas (↵ alterna)", "clock", "hide_windows", function()
+	toggle_pick(cx, t("Windows shown (↵ toggles)", "Janelas mostradas (↵ alterna)"), "clock", "hide_windows", function()
 		local hidden = kv_set("hide_windows")
 		local items: { PickItem } = {}
 		for _, s in shorts do
 			table.insert(items, visibility({
 				label = (WINDOW_NAMES[s] or s) .. " (" .. s .. ")",
 				id = s,
-				detail = count[s] .. (if count[s] == 1 then " cota" else " cotas"),
+				detail = count[s] .. (if count[s] == 1 then t(" limit", " cota") else t(" limits", " cotas")),
 			}, hidden[s] == true))
 		end
 		return items
@@ -178,7 +183,7 @@ function M.accounts(cx: WindowCx)
 	if snap == nil then
 		return
 	end
-	toggle_pick(cx, "Contas mostradas (↵ alterna)", "user", "hide_accounts", function()
+	toggle_pick(cx, t("Accounts shown (↵ toggles)", "Contas mostradas (↵ alterna)"), "user", "hide_accounts", function()
 		local hidden = kv_set("hide_accounts")
 		local items: { PickItem } = {}
 		for _, p in snap.providers do
@@ -240,7 +245,7 @@ function M.order(cx: WindowCx)
 		for _, id in order do
 			table.insert(shown, names[id])
 		end
-		lcx:toast("success", "Ordem dos providers salva", table.concat(shown, " › "))
+		lcx:toast("success", t("Provider order saved", "Ordem dos providers salva"), table.concat(shown, " › "))
 	end
 	local function step(lcx: WindowCx)
 		local taken: { [string]: boolean } = {}
@@ -252,7 +257,7 @@ function M.order(cx: WindowCx)
 		local items: { PickItem } = {}
 		for i, id in current do
 			if not taken[id] then
-				table.insert(items, { label = names[id], id = id, detail = "hoje em " .. i .. "º" })
+				table.insert(items, { label = names[id], id = id, detail = if PT then "hoje em " .. i .. "º" else "now #" .. i })
 			end
 		end
 		if #items == 0 then
@@ -260,9 +265,9 @@ function M.order(cx: WindowCx)
 			return
 		end
 		local placeholder = if #chosen == 0
-			then "Escolha o 1º provider (Esc salva a ordem escolhida até aqui)"
-			else table.concat(chosen, " › ") .. " › escolha o " .. (#chosen + 1) .. "º"
-		lcx:pick({ items = items, placeholder = placeholder, icon = "list", action = "colocar aqui" })
+			then t("Pick the 1st provider (Esc saves the order so far)", "Escolha o 1º provider (Esc salva a ordem escolhida até aqui)")
+			else table.concat(chosen, " › ") .. (if PT then " › escolha o " .. (#chosen + 1) .. "º" else " › pick #" .. (#chosen + 1))
+		lcx:pick({ items = items, placeholder = placeholder, icon = "list", action = t("put here", "colocar aqui") })
 			:next(function(choice, _err, later)
 				if later == nil then
 					return
@@ -287,7 +292,7 @@ function M.density(cx: WindowCx)
 	for _, id in DENSITY_ORDER do
 		table.insert(items, { label = DENSITIES[id], id = id, current = id == now })
 	end
-	cx:pick({ items = items, placeholder = "Densidade dos cartões de limites", icon = "grid" })
+	cx:pick({ items = items, placeholder = t("Limits card density", "Densidade dos cartões de limites"), icon = "grid" })
 		:next(function(choice, _err, _later)
 			if choice then
 				tern.kv.set("density", if choice.id == "auto" then nil else choice.id)

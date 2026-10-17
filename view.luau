@@ -4,6 +4,11 @@
 -- name and account, then one ring per limit window. Every tree hangs under an
 -- `.ail-root` element so ai-limits.css styles it wherever it is drawn.
 
+local PT = tern.kv.get("lang") == "pt"
+local function t(en: string, pt: string): string
+	return if PT then pt else en
+end
+
 local model = require("./model")
 local ui = tern.ui
 local el = ui.el
@@ -46,13 +51,18 @@ end
 
 local function who(email: string?, redact: boolean): string
 	if email == nil then
-		return "conta"
+		return t("account", "conta")
 	end
 	return if redact then model.redact(email) else email
 end
 
 local function ring(used: number, level: string, size: string): Node
 	return ui.node("meter", { value = used, style = "ring", size = size, tone = ring_tone(level) })
+end
+
+-- A window's length as shown: "plano" is also an id, kept as is in data.
+local function short_of(w: model.Window): string
+	return if w.short == "plano" then t("plan", "plano") else w.short
 end
 
 local function root(layout: Layout, kids: { Node }): Node
@@ -91,17 +101,17 @@ local function eta_text(w: model.Window, now_ms: number): string?
 	if w.eta == nil then
 		return nil
 	end
-	return "esgota em " .. model.until_text(w.eta :: number, now_ms)
+	return t("runs out in ", "esgota em ") .. model.until_text(w.eta :: number, now_ms)
 end
 
 local function window_title(label: string, w: model.Window, now_ms: number): string
-	local title = label .. ": " .. w.text .. " usado"
+	local title = label .. ": " .. w.text .. t(" used", " usado")
 	if w.resets then
-		title ..= " · reseta em " .. model.until_text(w.resets, now_ms)
+		title ..= t(" · resets in ", " · reseta em ") .. model.until_text(w.resets, now_ms)
 	end
 	local eta = eta_text(w, now_ms)
 	if eta then
-		title ..= " · no ritmo das últimas horas, " .. eta
+		title ..= t(" · at the pace of the last hours, ", " · no ritmo das últimas horas, ") .. eta
 	end
 	return title
 end
@@ -128,7 +138,7 @@ local function tile(w: model.Window, opts: Opts, label: string?, key: string?): 
 			ring(w.used, level, "lg"),
 			el("span", { class = "ail-pct", text = pct(w.used) }),
 		}),
-		el("span", { class = "ail-win", text = label or w.short }),
+		el("span", { class = "ail-win", text = label or short_of(w) }),
 		el("span", { class = "ail-reset", text = reset }),
 	}
 	local eta = eta_text(w, opts.now_ms)
@@ -144,7 +154,7 @@ local function tile(w: model.Window, opts: Opts, label: string?, key: string?): 
 	return el("div", {
 		class = "ail-tile",
 		key = key or w.key,
-		title = window_title(if label then label .. " · " .. w.short else w.short, w, opts.now_ms),
+		title = window_title(if label then label .. " · " .. short_of(w) else short_of(w), w, opts.now_ms),
 		attrs = { ["data-level"] = level },
 	}, kids)
 end
@@ -185,9 +195,9 @@ end
 -- The dense alternative to the rings: one row per limit window.
 local function limit_line(family: model.Family, w: model.Window, account: model.Account, now_ms: number): Node
 	local level = model.level(w.used, w.exhausted)
-	local label = w.short
+	local label = short_of(w)
 	if family.name ~= "" and #account.families > 1 then
-		label = family.name .. " · " .. w.short
+		label = family.name .. " · " .. short_of(w)
 	end
 	local reset = if w.resets then model.until_text(w.resets, now_ms) else "—"
 	local eta = if w.eta then "!" .. model.until_text(w.eta :: number, now_ms) else nil
@@ -228,13 +238,13 @@ local function account_row(provider: model.Provider, account: model.Account, now
 		table.insert(kids, el("span", { class = "ail-acct-pct", text = pct(w.used) }))
 		table.insert(kids, el("span", {
 			class = "ail-acct-reset",
-			text = if w.resets then model.until_text(w.resets, now_ms) else w.short,
+			text = if w.resets then model.until_text(w.resets, now_ms) else short_of(w),
 		}))
 	end
 	return el("button", {
 		class = "ail-acct",
 		key = account.key,
-		title = "Mostrar esta conta em destaque",
+		title = t("Put this account in front", "Mostrar esta conta em destaque"),
 		actions = { click = "feature:" .. provider.id .. "|" .. account.key },
 		attrs = { ["data-blocked"] = if account.blocked then "true" else "false" },
 	}, kids)
@@ -261,14 +271,14 @@ local function provider_card(provider: model.Provider, opts: Opts): Node
 		end
 		table.insert(head_right, el("span", {
 			class = "ail-count",
-			text = string.format("%d/%d livres", free, #provider.accounts),
-			title = "contas com limite livre",
+			text = string.format(t("%d/%d free", "%d/%d livres"), free, #provider.accounts),
+			title = t("accounts with limit left", "contas com limite livre"),
 		}))
 	end
 	if pinned then
 		table.insert(head_right, el("button", {
 			class = "ail-unpin",
-			title = "Voltar para a conta mais livre",
+			title = t("Back to the most available account", "Voltar para a conta mais livre"),
 			actions = { click = "unfeature:" .. provider.id },
 		}, { ui.node("icon", { name = "pin" }) }))
 	end
@@ -339,7 +349,7 @@ local function alerts(snap: model.Snapshot, opts: Opts): Node?
 		end
 		table.insert(rows, el("div", { class = "ail-alert ail-idle", key = "idle" }, {
 			ui.node("icon", { name = "minus", tone = "muted" }),
-			el("span", { class = "ail-alert-text", text = "sem dados de uso: " .. table.concat(names, ", ") }),
+			el("span", { class = "ail-alert-text", text = t("no usage data: ", "sem dados de uso: ") .. table.concat(names, ", ") }),
 		}))
 	end
 	return el("div", { class = "ail-alerts", key = "alerts" }, rows)
@@ -363,7 +373,7 @@ local function summary(snap: model.Snapshot, opts: Opts): Node
 		if w and w.eta then
 			reset = "!" .. model.until_text(w.eta :: number, opts.now_ms)
 		end
-		local title = if w then window_title(provider.name .. " · " .. w.short, w, opts.now_ms) else provider.name
+		local title = if w then window_title(provider.name .. " · " .. short_of(w), w, opts.now_ms) else provider.name
 		table.insert(rows, el("div", {
 			class = "ail-sum",
 			key = provider.id,
@@ -372,7 +382,7 @@ local function summary(snap: model.Snapshot, opts: Opts): Node
 		}, {
 			el("span", { class = "ail-logo", attrs = { ["data-provider"] = provider.id } }),
 			el("span", { class = "ail-sum-name", text = provider.name }),
-			el("span", { class = "ail-sum-win", text = if w then w.short else "" }),
+			el("span", { class = "ail-sum-win", text = if w then short_of(w) else "" }),
 			ring(if w then w.used else 0, level, "sm"),
 			el("span", { class = "ail-sum-pct", text = if w then pct(w.used) else "—" }),
 			el("span", { class = "ail-sum-reset", text = reset }),
@@ -381,7 +391,7 @@ local function summary(snap: model.Snapshot, opts: Opts): Node
 	if #snap.disabled > 0 then
 		table.insert(rows, el("div", { class = "ail-sum ail-sum-alert", key = "alerts" }, {
 			ui.node("icon", { name = "warn", tone = "warning" }),
-			el("span", { class = "ail-sum-name", text = #snap.disabled .. " login(s) com problema" }),
+			el("span", { class = "ail-sum-name", text = #snap.disabled .. t(" login(s) with problems", " login(s) com problema") }),
 		}))
 	end
 	return el("div", { class = "ail-summary-rows", key = "summary" }, rows)
@@ -394,13 +404,13 @@ local function updated_text(snap: model.Snapshot?, opts: Opts): Node
 		return el("span", { class = "ail-updated ail-warn", text = opts.problem :: string, title = opts.problem })
 	elseif snap then
 		local at = (snap :: model.Snapshot).at
-		local text = "atualizado às " .. os.date("%H:%M", at // 1000)
+		local text = t("updated at ", "atualizado às ") .. os.date("%H:%M", at // 1000)
 		-- Two missed polls: say so instead of passing old numbers off as current.
 		if opts.stale_ms and opts.now_ms - at > opts.stale_ms then
 			return el("span", {
 				class = "ail-updated ail-warn",
-				text = text .. " (antigo)",
-				title = "O omp não respondeu nas últimas consultas; pressione r para tentar de novo.",
+				text = text .. t(" (old)", " (antigo)"),
+				title = t("The last reads failed; press r to try again.", "O omp não respondeu nas últimas consultas; pressione r para tentar de novo."),
 			})
 		end
 		return el("span", { class = "ail-updated", text = text })
@@ -411,10 +421,10 @@ end
 local function actions(opts: Opts): Node
 	return el("div", { class = "ail-actions" }, {
 		icon_button(if opts.redact then "eye" else "eye-off", "redact", if opts.redact
-			then "Mostrar e-mails (e)"
-			else "Ocultar e-mails (e)"),
-		icon_button("redo", "refresh", "Atualizar agora (r)"),
-		icon_button("sliders", "configure", "Configurar (c)"),
+			then t("Show e-mails (e)", "Mostrar e-mails (e)")
+			else t("Hide e-mails (e)", "Ocultar e-mails (e)")),
+		icon_button("redo", "refresh", t("Refresh now (r)", "Atualizar agora (r)")),
+		icon_button("sliders", "configure", t("Settings (c)", "Configurar (c)")),
 	})
 end
 
@@ -438,18 +448,18 @@ function view.body(snap: model.Snapshot?, opts: Opts): Node
 			return root(opts.layout, {
 				el("div", { class = "ail-empty", key = "error" }, {
 					ui.node("icon", { name = "error", tone = "error" }),
-					el("span", { class = "ail-empty-title", text = "Não consegui ler os limites" }),
+					el("span", { class = "ail-empty-title", text = t("Could not read the limits", "Não consegui ler os limites") }),
 					el("span", { class = "ail-empty-text", text = opts.problem :: string }),
 					el("span", {
 						class = "ail-empty-text",
-						text = "Confira se o omp está instalado e logado (omp login), depois pressione r.",
+						text = t("Check that omp is installed and logged in (omp login), or that a direct source is set up, then press r.", "Confira se o omp está instalado e logado (omp login), depois pressione r."),
 					}),
 				}),
 			})
 		end
 		return root(opts.layout, {
 			el("div", { class = "ail-empty", key = "loading" }, {
-				ui.node("spinner", { style = "dots", label = "Lendo limites do omp…" }),
+				ui.node("spinner", { style = "dots", label = t("Reading limits…", "Lendo limites do omp…") }),
 			}),
 		})
 	end
@@ -461,7 +471,7 @@ function view.body(snap: model.Snapshot?, opts: Opts): Node
 	if opts.layout == "dashboard" then
 		table.insert(kids, el("div", { class = "ail-dash-head", key = "head" }, {
 			el("div", { class = "ail-title" }, {
-				el("span", { class = "ail-dash-title", text = "Limites de IA" }),
+				el("span", { class = "ail-dash-title", text = t("AI Limits", "Limites de IA") }),
 				updated_text(s, opts),
 			}),
 			actions(opts),
@@ -475,7 +485,7 @@ function view.body(snap: model.Snapshot?, opts: Opts): Node
 		table.insert(cards, el("div", {
 			class = "ail-empty",
 			key = "none",
-			text = opts.empty or "Nenhuma conta logada no omp tem limites para mostrar.",
+			text = opts.empty or t("No logged-in account has limits to show.", "Nenhuma conta logada no omp tem limites para mostrar."),
 		}))
 	end
 	table.insert(kids, el("div", { class = "ail-grid", key = "grid" }, cards))

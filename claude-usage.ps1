@@ -1,9 +1,11 @@
-# Claude (Claude Code subscription) usage for the AI Limits plugin, printed as
+﻿# Claude (Claude Code subscription) usage for the AI Limits plugin, printed as
 # an `omp usage --json` document. The token is the one Claude Code keeps in
 # ~/.claude/.credentials.json; it is read, never refreshed or written, and only
 # goes to api.anthropic.com. When it has expired, Claude Code renews it the next
 # time it runs.
 $ErrorActionPreference = 'Stop'
+# Messages follow the plugin's language (AI_LIMITS_LANG, set by the host).
+function T([string]$en, [string]$pt) { if ($env:AI_LIMITS_LANG -eq 'pt') { $pt } else { $en } }
 
 function Out-Doc($reports, $disabled) {
 	$doc = @{ reports = @($reports); disabledCredentials = @($disabled); generatedAt = [DateTimeOffset]::UtcNow.ToUnixTimeMilliseconds() }
@@ -38,7 +40,7 @@ if (Test-Path -LiteralPath $profileFile) {
 	}
 }
 
-$expired = 'login do Claude Code expirado: abra o claude para renovar'
+$expired = (T 'Claude Code login expired: open claude to renew it' 'login do Claude Code expirado: abra o claude para renovar')
 if ($oauth.expiresAt -gt 0 -and [long]$oauth.expiresAt -lt [DateTimeOffset]::UtcNow.ToUnixTimeMilliseconds() + 60000) {
 	Out-Problem $expired $email
 }
@@ -51,7 +53,7 @@ try {
 	$code = $null
 	if ($_.Exception.Response) { $code = [int]$_.Exception.Response.StatusCode }
 	if ($code -eq 401 -or $code -eq 403) { Out-Problem $expired $email }
-	Out-Problem "api.anthropic.com não respondeu ($code)" $email
+	Out-Problem (T "api.anthropic.com did not answer ($code)" "api.anthropic.com não respondeu ($code)") $email
 }
 
 function Ms([string]$iso) {
@@ -76,6 +78,6 @@ foreach ($w in @(
 		amount = @{ usedFraction = [Math]::Max(0.0, [Math]::Min(1.0, [double]$win.utilization / 100)); unit = 'percent' }
 	}
 }
-if ($limits.Count -eq 0) { Out-Problem 'o Claude não informou o uso' $email }
+if ($limits.Count -eq 0) { Out-Problem (T 'Claude did not report usage' 'o Claude não informou o uso') $email }
 
 Out-Doc @(@{ provider = 'anthropic'; metadata = @{ email = $email; accountId = $accountId; planType = $oauth.subscriptionType }; limits = $limits }) @()

@@ -7,6 +7,11 @@
 -- Block keys: r refreshes now (asks omp to drop its cache first), e shows or
 -- hides account e-mails.
 
+local PT = tern.kv.get("lang") == "pt"
+local function t(en: string, pt: string): string
+	return if PT then pt else en
+end
+
 local model = require("./model")
 local prefs = require("./prefs")
 local history = require("./history")
@@ -219,7 +224,7 @@ local function rebuild(): boolean
 	}
 	local ok, snap = pcall(model.from_omp, merged)
 	if not ok then
-		problem = "falha ao ler o relatório: " .. tostring(snap)
+		problem = t("could not read the report: ", "falha ao ler o relatório: ") .. tostring(snap)
 		return false
 	end
 	local now = os.time() * 1000
@@ -263,7 +268,8 @@ local function run_helpers(force: boolean)
 			"-File", tern.plugin.dir .. "\\" .. name,
 		}
 		local ok, err = pcall(function()
-			tern.process.run(argv, { timeout_ms = HELPER_TIMEOUT_MS }, function(result, _)
+			local env = { AI_LIMITS_LANG = if PT then "pt" else "en" }
+			tern.process.run(argv, { timeout_ms = HELPER_TIMEOUT_MS, env = env }, function(result, _)
 				local doc = if result.status == 0 and not result.timed_out then decode(result.stdout) else nil
 				if doc == nil then
 					return
@@ -290,14 +296,14 @@ end
 local function finish(result: ProcessResult)
 	loading = false
 	if result.timed_out then
-		problem = "omp usage não respondeu em 90 s"
+		problem = t("omp usage did not answer in 90 s", "omp usage não respondeu em 90 s")
 	elseif result.status ~= 0 then
 		local err = first_lines(result.stderr, 2)
-		problem = "omp usage saiu com " .. result.status .. (if err ~= "" then ": " .. err else "")
+		problem = t("omp usage exited with ", "omp usage saiu com ") .. result.status .. (if err ~= "" then ": " .. err else "")
 	else
 		local doc = decode(result.stdout)
 		if doc == nil or doc.reports == nil then
-			problem = "omp usage não devolveu JSON"
+			problem = t("omp usage returned no JSON", "omp usage não devolveu JSON")
 		else
 			omp_doc = doc
 		end
@@ -309,7 +315,7 @@ end
 
 -- Runs `omp <args>`, trying each install location until one spawns.
 local function run_omp(args: { string }, done: (ProcessResult) -> ()): string?
-	local last = "omp não está no PATH"
+	local last = t("omp is not on PATH", "omp não está no PATH")
 	for _, omp in omp_candidates() do
 		local argv: { string } = { omp }
 		for _, a in args do
@@ -486,7 +492,7 @@ local function opts_for(layout: view.Layout): view.Opts
 	local p = prefs.read()
 	local empty: string? = nil
 	if prefs.filtering(p) then
-		empty = "Tudo oculto pelos filtros. Ajuste em \"Limites de IA: configurar…\" (tecla c)."
+		empty = t("Everything is hidden by the filters. Adjust them in \"AI Limits: settings…\" (key c).", "Tudo oculto pelos filtros. Ajuste em \"Limites de IA: configurar…\" (tecla c).")
 	end
 	return {
 		layout = layout,
@@ -597,7 +603,7 @@ tern.block.define("cards", {
 		return { pane = cx.pane }
 	end,
 	title = function(_state: any): string?
-		return "Limites de IA"
+		return t("AI Limits", "Limites de IA")
 	end,
 	view = function(_state: any, cx: BlockCx): BlockView
 		return view.block(snapshot, cards_opts(cx))
@@ -620,7 +626,7 @@ tern.block.define("dashboard", {
 		return { pane = cx.pane }
 	end,
 	title = function(_state: any): string?
-		return "Limites"
+		return t("Limits", "Limites")
 	end,
 	view = function(_state: any, _cx: BlockCx): BlockView
 		return view.block(snapshot, opts_for("dashboard"))
@@ -713,9 +719,9 @@ tern.lens.define("usage", {
 			if snap == nil then
 				return nil
 			end
-			opts.note = "Cartões do snapshot do plugin ("
+			opts.note = t("Cards from the plugin's snapshot (", "Cartões do snapshot do plugin (")
 				.. os.date("%H:%M", (snap :: model.Snapshot).at // 1000)
-				.. "). Raw mostra a saída do omp."
+				.. t("). Raw shows omp's output.", "). Raw mostra a saída do omp.")
 		end
 		return ui.col({ view.body(snap, opts) })
 	end,

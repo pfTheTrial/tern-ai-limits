@@ -1,9 +1,11 @@
-# Codex (ChatGPT plan) usage for the AI Limits plugin, printed as an
+﻿# Codex (ChatGPT plan) usage for the AI Limits plugin, printed as an
 # `omp usage --json` document. The token is the one the Codex CLI keeps in
 # ~/.codex/auth.json (or $CODEX_HOME); it is read, never refreshed or written,
 # and only goes to chatgpt.com. When it has expired, Codex renews it the next
 # time it runs.
 $ErrorActionPreference = 'Stop'
+# Messages follow the plugin's language (AI_LIMITS_LANG, set by the host).
+function T([string]$en, [string]$pt) { if ($env:AI_LIMITS_LANG -eq 'pt') { $pt } else { $en } }
 
 function Out-Doc($reports, $disabled) {
 	$doc = @{ reports = @($reports); disabledCredentials = @($disabled); generatedAt = [DateTimeOffset]::UtcNow.ToUnixTimeMilliseconds() }
@@ -43,7 +45,7 @@ if ($t.id_token) {
 	$plan = $id.'https://api.openai.com/auth'.chatgpt_plan_type
 }
 $access = Claims $t.access_token
-$expired = 'login do Codex expirado: abra o codex para renovar'
+$expired = (T 'Codex login expired: open codex to renew it' 'login do Codex expirado: abra o codex para renovar')
 if ($access -and $access.exp -and [long]$access.exp -lt [DateTimeOffset]::UtcNow.ToUnixTimeSeconds() + 60) {
 	Out-Problem $expired $email
 }
@@ -57,7 +59,7 @@ try {
 	$code = $null
 	if ($_.Exception.Response) { $code = [int]$_.Exception.Response.StatusCode }
 	if ($code -eq 401 -or $code -eq 403) { Out-Problem $expired $email }
-	Out-Problem "chatgpt.com não respondeu ($code)" $email
+	Out-Problem (T "chatgpt.com did not answer ($code)" "chatgpt.com não respondeu ($code)") $email
 }
 
 # Window words the plugin knows, so the label alone names no family.
@@ -90,7 +92,7 @@ foreach ($extra in @($u.additional_rate_limits)) {
 	Add-Window $extra.rate_limit.primary_window $name "$name-primary"
 	Add-Window $extra.rate_limit.secondary_window $name "$name-secondary"
 }
-if ($limits.Count -eq 0) { Out-Problem 'o Codex não informou o uso' $email }
+if ($limits.Count -eq 0) { Out-Problem (T 'Codex did not report usage' 'o Codex não informou o uso') $email }
 if ($u.plan_type) { $plan = $u.plan_type }
 
 Out-Doc @(@{ provider = 'openai-codex'; metadata = @{ email = $email; accountId = $t.account_id; planType = $plan }; limits = $limits.ToArray() }) @()

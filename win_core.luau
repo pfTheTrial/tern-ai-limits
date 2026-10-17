@@ -2,6 +2,11 @@
 -- AI Limits, window half: the side panel's placement. Loaded by window.luau
 -- from a timer, so compiling it gets its own 50 ms budget.
 
+local PT = tern.kv.get("lang") == "pt"
+local function t(en: string, pt: string): string
+	return if PT then pt else en
+end
+
 local M = {}
 
 local KIND = "ai-limits.cards"
@@ -11,17 +16,17 @@ local DEFAULT_WIDTH = 34
 type Mode = "column" | "drawer" | "pip" | "off"
 
 local MODES: { [string]: string } = {
-	column = "Coluna fixa (sempre aberta)",
-	drawer = "Gaveta (abre e fecha no atalho)",
-	pip = "Cartão flutuante",
-	off = "Desligado (só barra de status)",
+	column = t("Fixed column (always open)", "Coluna fixa (sempre aberta)"),
+	drawer = t("Drawer (opens and closes on the shortcut)", "Gaveta (abre e fecha no atalho)"),
+	pip = t("Floating card", "Cartão flutuante"),
+	off = t("Off (status bar only)", "Desligado (só barra de status)"),
 }
 local MODE_ORDER = { "column", "drawer", "pip", "off" }
 local CORNERS: { [string]: string } = {
-	tl = "superior esquerdo",
-	tr = "superior direito",
-	bl = "inferior esquerdo",
-	br = "inferior direito",
+	tl = t("top left", "superior esquerdo"),
+	tr = t("top right", "superior direito"),
+	bl = t("bottom left", "inferior esquerdo"),
+	br = t("bottom right", "inferior direito"),
 }
 
 -- The panel this window last found, so pane_closed can tell a user close.
@@ -338,7 +343,7 @@ local function show(cx: WindowCx, focus_panel: boolean)
 	end
 	local pane = cx.layout:split(target, side(), { block = KIND }, { focus = false })
 	if pane == nil then
-		cx:toast("error", "AI Limits não carregou neste host", "Rode `tern plugin list` para ver o erro.")
+		cx:toast("error", t("AI Limits did not load on this host", "AI Limits não carregou neste host"), t("Run `tern plugin list` to see the error.", "Rode `tern plugin list` para ver o erro."))
 		return
 	end
 	card_pane = pane
@@ -507,9 +512,9 @@ local function open_dashboard(cx: WindowCx)
 		cx.layout:focus(dash.pane)
 		return
 	end
-	local tab, err = cx.layout:tab({ name = "Limites", launch = { block = DASH } })
+	local tab, err = cx.layout:tab({ name = t("Limits", "Limites"), launch = { block = DASH } })
 	if tab == nil then
-		cx:toast("error", "Não consegui abrir a aba Limites", err)
+		cx:toast("error", t("Could not open the Limits tab", "Não consegui abrir a aba Limites"), err)
 	end
 end
 
