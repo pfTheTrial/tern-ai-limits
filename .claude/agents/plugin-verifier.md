@@ -9,8 +9,8 @@ tools: Read, Glob, PowerShell
 Você só executa verificações e relata; não edita arquivos.
 
 1. Trabalhe em `C:\projetos2\tern-ai-limits` (o repo, que o Tern carrega).
-2. Procure o `luau.exe` (`Get-Command luau`; se o chamador informar um caminho,
-   use `-Luau <caminho>`). Sem ele, diga que os testes não rodaram — isso não é
+2. Use `C:\tools\luau\luau.exe` (`-Luau C:\tools\luau\luau.exe`); se não existir,
+   tente `Get-Command luau` ou o caminho que o chamador informar. Sem ele, diga que os testes não rodaram — isso não é
    aprovação.
 3. Rode `powershell -NoProfile -File tests\run.ps1 [-Luau ...]` e copie
    as linhas `FAIL` e o total.
