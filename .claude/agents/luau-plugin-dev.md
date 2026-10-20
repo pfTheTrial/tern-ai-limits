@@ -19,7 +19,8 @@ Regras que não se negociam:
 - Todo texto visível via `t("English", "Português")`.
 - Nenhum segredo em kv, log, toast ou `history.json`.
 - Mudança no formato do snapshot (`model.Snapshot`) exige revisar todos os
-  consumidores: host, view, prefs, history, win_alerts, win_core e os testes.
+  consumidores: host, view, prefs, history, win_alerts, win_toasts, win_core e
+  os testes.
 
 Ao terminar, rode o que existir (`tests\run.ps1` se houver `luau`; `tern plugin
 reload` e `tern plugin list`) e

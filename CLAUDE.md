@@ -25,8 +25,9 @@ Dois "halves" que só conversam por `tern.kv`:
   `snapshot`/`snapshot_all` no kv. Desenha os blocos `cards` e `dashboard` e a
   lens `omp usage` via `view.luau`.
 - **window** (`window.luau`, UI): só registra comandos, chrome e eventos. Carrega
-  sob demanda `win_core` (posicionamento do painel), `win_alerts` (peek, status,
-  título, toasts), `win_settings` e `win_filters` (pickers). Nunca busca dados:
+  sob demanda, um módulo por timer, `win_place` + `win_core` (posicionamento do
+  painel), `win_alerts` (peek, status, título) e `win_toasts` (toasts), e no
+  primeiro uso `win_settings` e `win_filters` (pickers). Nunca busca dados:
   só lê o kv.
 - **Helpers** `*-usage.ps1`: imprimem um documento no formato do
   `omp usage --json` (`reports`, `disabledCredentials`, `generatedAt`).
@@ -59,7 +60,9 @@ Dois "halves" que só conversam por `tern.kv`:
 
 - Testes: `powershell -File tests\run.ps1 [-Luau C:\caminho\luau.exe]`.
   Cobrem `model`, `prefs` e `history` com stub de `tern`. Precisa do CLI `luau`
-  (https://github.com/luau-lang/luau/releases), que **não está no PATH** desta máquina.
+  (https://github.com/luau-lang/luau/releases); nesta máquina está em
+  `C:\tools\luau\luau.exe` (0.743, fora do PATH): `-Luau C:\tools\luau\luau.exe`.
+  O `luau-analyze` não lê `tern.d.luau`; checagem de tipos é pelo luau-lsp.
 - Carregamento real: `tern plugin reload` (sai 1 se algum plugin falhar) e
   `tern plugin list` deve mostrar `ai-limits ... ready`. Confira que
   `%APPDATA%\Tern\plugins\ai-limits.path` ainda aponta para este repo.

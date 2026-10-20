@@ -1,317 +1,32 @@
 --!strict
--- AI Limits, window half: the side panel's placement. Loaded by window.luau
--- from a timer, so compiling it gets its own 50 ms budget.
+-- AI Limits, window half: showing, hiding and keeping the side panel in place,
+-- and the "Limites" tab. The helpers it uses live in win_place, which
+-- window.luau loads in an earlier timer call, so compiling each file gets its
+-- own 50 ms budget.
 
-local PT = tern.kv.get("lang") == "pt"
-local function t(en: string, pt: string): string
-	return if PT then pt else en
-end
+local P = require("./win_place")
 
 local M = {}
 
-local KIND = "ai-limits.cards"
-local DASH = "ai-limits.dashboard"
-local DEFAULT_WIDTH = 34
+local KIND = P.KIND
+local DASH = P.DASH
+local S = P.S
+local t = P.t
+local mode = P.mode
+local side = P.side
+local corner = P.corner
+local is_open = P.is_open
+local find_kind = P.find_kind
+local panel = P.panel
+local active_tab = P.active_tab
+local edge_leaf = P.edge_leaf
+local neighbour = P.neighbour
+local fix_width = P.fix_width
+local start_width = P.start_width
+local place = P.place
 
-type Mode = "column" | "drawer" | "pip" | "off"
-
-local MODES: { [string]: string } = {
-	column = t("Fixed column (always open)", "Coluna fixa (sempre aberta)"),
-	drawer = t("Drawer (opens and closes on the shortcut)", "Gaveta (abre e fecha no atalho)"),
-	pip = t("Floating card", "Cartão flutuante"),
-	off = t("Off (status bar only)", "Desligado (só barra de status)"),
-}
-local MODE_ORDER = { "column", "drawer", "pip", "off" }
-local CORNERS: { [string]: string } = {
-	tl = t("top left", "superior esquerdo"),
-	tr = t("top right", "superior direito"),
-	bl = t("bottom left", "inferior esquerdo"),
-	br = t("bottom right", "inferior direito"),
-}
-
--- The panel this window last found, so pane_closed can tell a user close.
-local card_pane: number? = nil
 -- Where focus goes back to when the drawer closes.
 local drawer_return: number? = nil
--- Width fixing after a move: the measurement asked for, and the report last
--- acted on.
-local width_due: number? = nil
-local resized_from: string? = nil
-
--- Settings, all in kv so every window shares them.
-
-local function mode(): Mode
-	local m = tern.kv.get("mode")
-	if type(m) == "string" and MODES[m] then
-		return m :: Mode
-	end
-	return "column"
-end
-
-local function side(): Dir
-	local s: Dir = if tern.kv.get("side") == "left" then "left" else "right"
-	return s
-end
-
-local function width(): number
-	local w = tonumber(tern.kv.get("width"))
-	return if w and w >= 20 and w <= 120 then w else DEFAULT_WIDTH
-end
-
-local function corner(): Corner
-	local c = tern.kv.get("corner")
-	if type(c) == "string" and CORNERS[c] then
-		return c :: Corner
-	end
-	return "br"
-end
-
--- Whether the panel should be showing; the drawer starts closed.
-local function is_open(): boolean
-	local v = tern.kv.get("open")
-	if type(v) == "boolean" then
-		return v
-	end
-	return mode() ~= "drawer"
-end
-
--- Panes and tabs.
-
--- Since when each block of ours has been missing from the host's live list.
-local missing_since: { [number]: number } = {}
-
--- Whether the host half runs `pane`: a block that restarted while the host
--- half was reloading exits without running `init`, and Tern reports no exit
--- status for plugin blocks, so the host publishes its live blocks in kv.
-local function alive(pane: PaneInfo): boolean
-	if pane.exited ~= nil then
-		return false
-	end
-	local live = tern.kv.get("live")
-	if type(live) == "table" then
-		for _, id in live do
-			if id == pane.pane then
-				missing_since[pane.pane] = nil
-				return true
-			end
-		end
-	end
-	-- A reloading host lists nothing for a moment, and a new block registers
-	-- a little after it appears: only a lasting absence means dead.
-	local since = missing_since[pane.pane]
-	if since == nil then
-		missing_since[pane.pane] = tern.now()
-		return true
-	end
-	return tern.now() - since < 4000
-end
-
--- A live block of `kind`; dead ones are closed so the caller recreates them.
-local function find_kind(cx: WindowCx, kind: string): PaneInfo?
-	for _, pane in cx.session:panes() do
-		if pane.block == kind then
-			if alive(pane) then
-				return pane
-			end
-			if pane.pane == card_pane then
-				card_pane = nil
-			end
-			missing_since[pane.pane] = nil
-			cx.layout:close(pane.pane)
-		end
-	end
-	return nil
-end
-
-local function panel(cx: WindowCx): PaneInfo?
-	local info = find_kind(cx, KIND)
-	if info then
-		card_pane = info.pane
-	end
-	return info
-end
-
-local function active_tab(cx: WindowCx): number?
-	local focused = cx.session:focused()
-	if focused == nil then
-		return nil
-	end
-	return cx.session:tab_of(focused)
-end
-
--- The leaf at the panel's edge of `tab`: the right- (or left-) most branch of
--- side-by-side splits, the top branch of stacked ones.
-local function edge_leaf(cx: WindowCx, tab: number, s: Dir, exclude: number?): number?
-	local layout = cx.session:layout(tab)
-	if layout == nil then
-		return nil
-	end
-	local function walk(t: TabTree): number?
-		if t.pane ~= nil then
-			return if t.pane == exclude then nil else t.pane
-		end
-		local first, second = t[1], t[2]
-		if t.split == "right" and s == "right" then
-			first, second = second, first
-		end
-		local found = if first then walk(first) else nil
-		if found == nil and second then
-			found = walk(second)
-		end
-		return found
-	end
-	return walk(layout.root)
-end
-
--- A tiled pane of `tab` other than the panel, preferring `keep`.
-local function neighbour(cx: WindowCx, card: number, tab: number?, keep: number?): number?
-	if tab == nil then
-		return keep
-	end
-	local first: number? = nil
-	for _, p in cx.session:panes() do
-		if p.tab == tab and p.pane ~= card and not p.floating then
-			if p.pane == keep then
-				return keep
-			end
-			if p.focused and first == nil then
-				first = p.pane
-			end
-			first = first or p.pane
-		end
-	end
-	return first
-end
-
-local function refocus(cx: WindowCx, pane: number, keep: number?)
-	if keep ~= nil and keep ~= pane and cx.session:focused() ~= keep then
-		cx.layout:focus(keep)
-	end
-end
-
--- Column width. Pane sizes reach Lua only through the block itself, and a
--- window that is covered stops reporting them, so a size read right after a
--- move can be stale. The window asks for a measurement (kv `width_req`); the
--- host answers in `panel_size` with the request it saw; only an answer to the
--- current request moves the divider.
-
-local function fix_width(cx: WindowCx): boolean
-	if width_due == nil then
-		return false
-	end
-	local info = panel(cx)
-	if info == nil or info.floating or info.parked then
-		width_due = nil
-		return false
-	end
-	local report = tern.kv.get("panel_size")
-	if type(report) ~= "table" or report.seq ~= width_due then
-		return true
-	end
-	local cols = tonumber(report.cols)
-	if cols == nil then
-		return true
-	end
-	local want = width()
-	if math.abs(cols - want) <= 1 then
-		width_due = nil
-		return false
-	end
-	local key = tostring(report.seq) .. ":" .. tostring(cols)
-	if resized_from ~= key then
-		resized_from = key
-		local inward: Dir = if side() == "right" then "left" else "right"
-		cx.layout:resize(info.pane, inward, want - cols)
-	end
-	return true
-end
-
-local function schedule_width(left: number)
-	tern.timer(400, function(later: WindowCx?)
-		if later and fix_width(later :: WindowCx) and left > 1 then
-			schedule_width(left - 1)
-		end
-	end)
-end
-
-local function start_width()
-	local seq = (tonumber(tern.kv.get("width_req")) or 0) + 1
-	tern.kv.set("width_req", seq)
-	width_due = seq
-	resized_from = nil
-	-- A quick follow-up for the common case; the main loop keeps trying.
-	schedule_width(15)
-end
-
--- Placement.
-
-local function place_column(cx: WindowCx, info: PaneInfo, tab: number?, keep: number?)
-	local pane = info.pane
-	if info.parked then
-		cx.layout:unpark(pane, { focus = false })
-	end
-	local now = cx.session:pane(pane)
-	if now and now.floating then
-		cx.layout:dock(pane)
-		now = cx.session:pane(pane)
-	end
-	if tab == nil then
-		return
-	end
-	local s: Dir = side()
-	local at_edge = now ~= nil and now.tab == tab and edge_leaf(cx, tab, s, nil) == pane
-	if not at_edge then
-		local target = edge_leaf(cx, tab, s, pane)
-		if target then
-			if not cx.layout:move(pane, target, s, { focus = false }) then
-				cx.layout:move_to_tab(pane, tab, { focus = false })
-				cx.layout:move(pane, target, s, { focus = false })
-			end
-			start_width()
-		end
-	end
-	refocus(cx, pane, keep)
-end
-
--- When this window last floated the panel itself.
-local floated_at = -math.huge
-
-local function place_pip(cx: WindowCx, info: PaneInfo, tab: number?, keep: number?)
-	local pane = info.pane
-	if info.parked then
-		cx.layout:unpark(pane, { focus = false })
-	elseif tab ~= nil and info.tab ~= tab then
-		cx.layout:move_to_tab(pane, tab, { focus = false })
-	end
-	local now = cx.session:pane(pane)
-	if now == nil or not now.floating then
-		-- Without an explicit owner Tern ignores the corner and picks the one
-		-- nearest the block's old area.
-		local over = neighbour(cx, pane, if now then now.tab else tab, keep)
-		floated_at = tern.now()
-		local ok, err = cx.layout:float(pane, over, corner(), { focus = false })
-		if not ok then
-			tern.log.warn("ai-limits: float failed", err)
-		end
-	end
-	refocus(cx, pane, keep)
-end
-
--- Whether the panel floated when this window last placed or saw it; nil while
--- parked or unknown.
-local was_floating: boolean? = nil
-
-local function place(cx: WindowCx, info: PaneInfo, tab: number?, keep: number?, focus_panel: boolean)
-	if mode() == "pip" then
-		place_pip(cx, info, tab, if focus_panel then nil else keep)
-	else
-		place_column(cx, info, tab, if focus_panel then nil else keep)
-	end
-	was_floating = mode() == "pip"
-	if focus_panel then
-		cx.layout:focus(info.pane)
-	end
-end
 
 local function show(cx: WindowCx, focus_panel: boolean)
 	tern.kv.set("open", true)
@@ -346,7 +61,7 @@ local function show(cx: WindowCx, focus_panel: boolean)
 		cx:toast("error", t("AI Limits did not load on this host", "AI Limits não carregou neste host"), t("Run `tern plugin list` to see the error.", "Rode `tern plugin list` para ver o erro."))
 		return
 	end
-	card_pane = pane
+	S.card_pane = pane
 	if focus_panel then
 		drawer_return = keep
 	end
@@ -419,7 +134,7 @@ local function watch_tree(cx: WindowCx, tab: number)
 	local key = tree_key(layout.root)
 	local seen = trees_seen[tab]
 	trees_seen[tab] = key
-	if seen ~= nil and seen ~= key and width_due == nil then
+	if seen ~= nil and seen ~= key and S.width_due == nil then
 		start_width()
 	end
 end
@@ -445,9 +160,9 @@ local function ensure(cx: WindowCx)
 	end
 	-- The pane header's float and dock buttons pick the mode, so the next
 	-- placement does not undo them.
-	if info and not info.parked and not unparked and was_floating ~= nil and m ~= "off" and is_open() then
+	if info and not info.parked and not unparked and S.was_floating ~= nil and m ~= "off" and is_open() then
 		local floating = info.floating == true
-		if floating ~= was_floating and floating ~= (m == "pip") then
+		if floating ~= S.was_floating and floating ~= (m == "pip") then
 			m = if floating then "pip" else "column"
 			tern.kv.set("mode", m)
 			local layout = if floating and info.tab then cx.session:layout(info.tab) else nil
@@ -461,7 +176,7 @@ local function ensure(cx: WindowCx)
 		end
 	end
 	if info then
-		was_floating = if info.parked then nil else info.floating == true
+		S.was_floating = if info.parked then nil else info.floating == true
 	end
 	if m == "off" or not is_open() then
 		if info and not info.parked then
@@ -503,7 +218,7 @@ local function ensure(cx: WindowCx)
 		if layout then
 			for _, float in layout.floats do
 				if float.pane == info.pane and float.corner ~= corner() then
-					if tern.now() - floated_at < 3000 then
+					if tern.now() - S.floated_at < 3000 then
 						cx.layout:float(info.pane, float.over, corner(), { focus = false })
 					else
 						tern.kv.set("corner", float.corner)
@@ -551,10 +266,10 @@ end
 -- that is going down (Tern quitting or crashing) also reports its panes
 -- closed, so decide a moment later, when no panel of ours is left.
 function M.pane_closed(ev: PaneEvent, cx: WindowCx)
-	if card_pane == nil or ev.pane ~= card_pane or cx.session:pane(ev.pane) ~= nil then
+	if S.card_pane == nil or ev.pane ~= S.card_pane or cx.session:pane(ev.pane) ~= nil then
 		return
 	end
-	card_pane = nil
+	S.card_pane = nil
 	closing_until = tern.now() + 1500
 	tern.timer(1500, function(later: WindowCx?)
 		if later and find_kind(later :: WindowCx, KIND) == nil then
@@ -577,12 +292,12 @@ function M.tick(cx: WindowCx)
 	fix_width(cx)
 end
 
-M.MODES = MODES
-M.MODE_ORDER = MODE_ORDER
-M.CORNERS = CORNERS
+M.MODES = P.MODES
+M.MODE_ORDER = P.MODE_ORDER
+M.CORNERS = P.CORNERS
 M.mode = mode
 M.side = side
-M.width = width
+M.width = P.width
 M.corner = corner
 M.panel = panel
 M.neighbour = neighbour

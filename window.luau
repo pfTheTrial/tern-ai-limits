@@ -10,9 +10,12 @@
 -- The entry runs under a 50 ms budget, and Tern compiles every chunk to native
 -- code first: the whole half in one file went past that at cold starts and
 -- even on plain reloads. So this file only registers commands, chrome and
--- events. win_core (placement) and win_alerts (peek, status, toasts) load
--- from separate timer calls, each with its own budget; win_settings and
--- win_filters (the pickers) load in the first command that needs them.
+-- events. win_place and win_core (placement), win_alerts (peek, status line,
+-- title) and win_toasts (threshold toasts) load from separate timer calls,
+-- each with its own budget; win_settings and win_filters (the pickers) load
+-- in the first command that needs them. Measured on an idle machine, each of
+-- the old two modules took 10-20 ms to compile, and a busy one (Tern
+-- reloading every plugin, git timing out) pushed that past 50 ms.
 
 -- Focus, pane and tab events place the panel at once; the loop only catches
 -- what no event reports (a parked panel dealt back, a host reload).
@@ -193,19 +196,45 @@ local function loop(cx: WindowCx?)
 	end
 	alerts.reload_summary()
 	if cx then
-		core.tick(cx :: WindowCx)
+		-- Placement reads kv and walks the layout: its own budget, apart from
+		-- the beat and the summary check above.
+		tern.timer(0, function(later: WindowCx?)
+			if later then
+				core.tick(later :: WindowCx)
+			end
+		end)
 	end
 	tern.timer(LOOP_MS, loop)
 end
 
--- One module per timer call; the loop starts once the panel and alerts are in.
--- The pickers wait for their first use: a timer that runs over its budget
--- stops every timer of this half, the loop included.
-tern.timer(0, function(_cx: WindowCx?)
-	need_core()
-	tern.timer(0, function(_cx2: WindowCx?)
+-- One module per timer call, in order (win_core uses win_place, win_toasts
+-- uses win_alerts, so each require finds the other already compiled); the loop
+-- starts once they are all in. The pickers wait for their first use: a timer
+-- that runs over its budget stops every timer of this half, the loop included.
+local STEPS: { () -> () } = {
+	function()
+		require("./win_place")
+	end,
+	function()
+		need_core()
+	end,
+	function()
 		need_alerts()
-		tern.timer(0, loop)
-		tern.timer(300, watch_config)
+	end,
+	function()
+		require("./win_toasts")
+	end,
+}
+
+local function boot(i: number)
+	tern.timer(0, function(_cx: WindowCx?)
+		STEPS[i]()
+		if i < #STEPS then
+			boot(i + 1)
+		else
+			tern.timer(0, loop)
+			tern.timer(300, watch_config)
+		end
 	end)
-end)
+end
+boot(1)
