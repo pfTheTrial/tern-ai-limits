@@ -229,6 +229,18 @@ do
 	check("levels", model.level(0.69) == "ok" and model.level(0.7) == "warn" and model.level(0.9) == "bad" and model.level(0.1, true) == "bad")
 end
 
+-- Moving a card with its ↑/↓ buttons.
+do
+	local shown = { "a", "b", "c" }
+	local down = prefs.move({ "x", "c" }, shown, "a", 1)
+	check("move down swaps and keeps hidden after", down ~= nil and table.concat(down, ",") == "b,a,c,x", if down then table.concat(down, ",") else "nil")
+	local up = prefs.move({}, shown, "c", -1)
+	check("move up", up ~= nil and table.concat(up, ",") == "a,c,b")
+	check("no move past the top", prefs.move({}, shown, "a", -1) == nil)
+	check("no move past the bottom", prefs.move({}, shown, "c", 1) == nil)
+	check("unknown id", prefs.move({}, shown, "z", 1) == nil)
+end
+
 print(string.format("%d checks, %d failed", count, failures))
 if failures > 0 then
 	error("tests failed")

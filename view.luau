@@ -252,7 +252,26 @@ end
 
 -- The dashboard shows every account with its rings; the panel shows the
 -- account in front with rings and the rest as rows.
-local function provider_card(provider: model.Provider, opts: Opts): Node
+-- Tern blocks get no drag events, so a card moves by these buttons; they
+-- show while the card is hovered or one of them has focus.
+local function move_buttons(provider: model.Provider, index: number, count: number): Node
+	local function button(delta: number, glyph: string, title: string): Node
+		return el("button", {
+			class = "ail-move",
+			key = "move" .. delta,
+			text = glyph,
+			title = title,
+			disabled = (delta < 0 and index == 1) or (delta > 0 and index == count),
+			actions = { click = "move:" .. provider.id .. "|" .. delta },
+		})
+	end
+	return el("div", { class = "ail-moves" }, {
+		button(-1, "↑", t("Move up", "Mover para cima")),
+		button(1, "↓", t("Move down", "Mover para baixo")),
+	})
+end
+
+local function provider_card(provider: model.Provider, opts: Opts, index: number, count: number): Node
 	local main, pinned = front(provider, opts)
 	if opts.layout == "dashboard" then
 		main, pinned = provider.accounts[1], false
@@ -269,10 +288,14 @@ local function provider_card(provider: model.Provider, opts: Opts): Node
 				free += 1
 			end
 		end
+		-- A person icon, not the word "free": next to a plan pill that read as
+		-- the Free tier, and a word crowded the provider's name.
 		table.insert(head_right, el("span", {
 			class = "ail-count",
-			text = string.format(t("%d/%d free", "%d/%d livres"), free, #provider.accounts),
-			title = t("accounts with limit left", "contas com limite livre"),
+			title = string.format(t("%d of %d accounts with limit left", "%d de %d contas com limite livre"), free, #provider.accounts),
+		}, {
+			ui.node("icon", { name = "user" }),
+			el("span", { text = string.format("%d/%d", free, #provider.accounts) }),
 		}))
 	end
 	if pinned then
@@ -281,6 +304,9 @@ local function provider_card(provider: model.Provider, opts: Opts): Node
 			title = t("Back to the most available account", "Voltar para a conta mais livre"),
 			actions = { click = "unfeature:" .. provider.id },
 		}, { ui.node("icon", { name = "pin" }) }))
+	end
+	if count > 1 and opts.only == nil and (opts.layout == "panel" or opts.layout == "dashboard") then
+		table.insert(head_right, move_buttons(provider, index, count))
 	end
 	local kids: { Node } = {
 		el("div", { class = "ail-head" }, {
@@ -308,9 +334,9 @@ local function provider_card(provider: model.Provider, opts: Opts): Node
 		end
 	else
 		if main then
-			for _, node in limits_of(main, opts) do
-				table.insert(kids, node)
-			end
+			-- Keyed by account: putting another account in front mounts a new
+			-- block, which eases in (ai-limits.css) instead of swapping at once.
+			table.insert(kids, el("div", { class = "ail-front", key = "front:" .. main.key }, limits_of(main, opts)))
 		end
 		if #provider.accounts > 1 then
 			local rows: { Node } = {}
@@ -478,8 +504,8 @@ function view.body(snap: model.Snapshot?, opts: Opts): Node
 		}))
 	end
 	local cards: { Node } = {}
-	for _, provider in s.providers do
-		table.insert(cards, provider_card(provider, opts))
+	for i, provider in s.providers do
+		table.insert(cards, provider_card(provider, opts, i, #s.providers))
 	end
 	if #cards == 0 then
 		table.insert(cards, el("div", {

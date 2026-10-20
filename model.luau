@@ -70,6 +70,8 @@ local NAMES: { [string]: string } = {
 	["github-copilot"] = "Copilot",
 	cursor = "Cursor",
 	grok = "Grok",
+	-- omp's xAI login (`omp login xai`); grok-usage.ps1 reports as `grok`.
+	["xai-oauth"] = "Grok (omp)",
 	commandcode = "Command Code",
 	zai = "z.ai",
 	minimax = "MiniMax",

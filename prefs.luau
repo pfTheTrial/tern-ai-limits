@@ -165,4 +165,22 @@ function prefs.apply(snap: model.Snapshot, p: Prefs): model.Snapshot
 	}
 end
 
+-- The saved order after moving `id` one place (`delta` -1 or 1) among the
+-- providers `shown`, in their shown order; hidden providers keep their saved
+-- order after them. nil when `id` is already at that end.
+function prefs.move(saved: { string }, shown: { string }, id: string, delta: number): { string }?
+	local order = table.clone(shown)
+	local i = table.find(order, id)
+	if i == nil or order[i + delta] == nil then
+		return nil
+	end
+	order[i], order[i + delta] = order[i + delta], order[i]
+	for _, other in saved do
+		if table.find(order, other) == nil then
+			table.insert(order, other)
+		end
+	end
+	return order
+end
+
 return prefs

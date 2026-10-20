@@ -8,14 +8,19 @@
 	--ail-ring: 42px;
 	font-family: var(--sans);
 
+	/* Equal columns: every card in a row gets the same width, and a lone card
+	   on the last row does not stretch wider than the rest. */
 	.ail-grid {
-		display: flex;
-		flex-wrap: wrap;
+		--ail-card-min: 220px;
+		display: grid;
+		grid-template-columns: repeat(auto-fill, minmax(min(var(--ail-card-min), 100%), 1fr));
 		gap: 8px;
 	}
 
 	.ail-card {
-		flex: 1 1 220px;
+		/* A long nowrap label ("SuperGrok Weekly Credits · 7d") would otherwise
+		   set the card's minimum width and push it past the column. */
+		min-width: 0;
 		display: flex;
 		flex-direction: column;
 		gap: 10px;
@@ -54,6 +59,9 @@
 		line-height: 16px;
 		font-weight: 600;
 		color: var(--t1);
+		white-space: nowrap;
+		overflow: hidden;
+		text-overflow: ellipsis;
 	}
 	.ail-sub {
 		font-size: 11px;
@@ -79,6 +87,24 @@
 		font-variant-numeric: tabular-nums;
 	}
 	.ail-plan { text-transform: capitalize; }
+	.ail-count {
+		display: flex;
+		align-items: center;
+		gap: 3px;
+		padding-left: 5px;
+	}
+	.ail-count .sf-icon,
+	.ail-count svg { width: 11px; height: 11px; }
+
+	.ail-front {
+		display: flex;
+		flex-direction: column;
+		gap: 10px;
+		animation: ail-front-in 220ms cubic-bezier(0.2, 0, 0, 1);
+	}
+	@media (prefers-reduced-motion: reduce) {
+		.ail-front { animation: none; }
+	}
 
 	.ail-group {
 		display: flex;
@@ -196,6 +222,43 @@
 		color: var(--accent);
 	}
 	.ail-unpin:hover { color: var(--t1); }
+	/* No room taken until the card is hovered or a button has focus, so the
+	   provider's name keeps the header's width at rest. */
+	.ail-moves {
+		display: flex;
+		gap: 2px;
+		max-width: 0;
+		margin-left: -4px; /* cancels .ail-meta's gap while closed */
+		overflow: hidden;
+		opacity: 0;
+		transition: max-width 160ms ease, margin-left 160ms ease, opacity 120ms;
+	}
+	.ail-card:hover .ail-moves,
+	.ail-moves:focus-within {
+		max-width: 40px;
+		margin-left: 0;
+		opacity: 1;
+	}
+	@media (prefers-reduced-motion: reduce) {
+		.ail-moves { transition: none; }
+	}
+	.ail-move {
+		width: 18px;
+		height: 18px;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		padding: 0;
+		border: none;
+		border-radius: 9px;
+		background: var(--chip-bg);
+		color: var(--t2);
+		font: inherit;
+		font-size: 11px;
+		line-height: 1;
+	}
+	.ail-move:hover { color: var(--t1); }
+	.ail-move:disabled { opacity: 0.35; }
 	.ail-acct-name {
 		flex: 1 1 auto;
 		min-width: 0;
@@ -305,6 +368,13 @@
 	}
 }
 
+@keyframes ail-front-in {
+	from {
+		opacity: 0;
+		transform: translateY(-4px);
+	}
+}
+
 /* Summary rows for a resting floating card: one line per provider. */
 .ail-root {
 	.ail-summary-rows {
@@ -372,6 +442,7 @@
 .ail-root .ail-logo[data-provider='google-gemini-cli'] { background-image: url(icons/google-gemini-cli-light.svg); }
 .ail-root .ail-logo[data-provider='github-copilot'] { background-image: url(icons/github-copilot-light.svg); }
 .ail-root .ail-logo[data-provider='cursor'] { background-image: url(icons/cursor-light.svg); }
+.ail-root .ail-logo[data-provider='xai-oauth'],
 .ail-root .ail-logo[data-provider='grok'] { background-image: url(icons/grok-light.svg); }
 .ail-root .ail-logo[data-provider='commandcode'] { background-image: url(icons/commandcode-light.svg); }
 .ail-root .ail-logo[data-provider='zai'] { background-image: url(icons/zai-light.svg); }
@@ -387,6 +458,7 @@
 [data-theme='dark'] .ail-root .ail-logo[data-provider='google-gemini-cli'] { background-image: url(icons/google-gemini-cli-dark.svg); }
 [data-theme='dark'] .ail-root .ail-logo[data-provider='github-copilot'] { background-image: url(icons/github-copilot-dark.svg); }
 [data-theme='dark'] .ail-root .ail-logo[data-provider='cursor'] { background-image: url(icons/cursor-dark.svg); }
+[data-theme='dark'] .ail-root .ail-logo[data-provider='xai-oauth'],
 [data-theme='dark'] .ail-root .ail-logo[data-provider='grok'] { background-image: url(icons/grok-dark.svg); }
 [data-theme='dark'] .ail-root .ail-logo[data-provider='commandcode'] { background-image: url(icons/commandcode-dark.svg); }
 [data-theme='dark'] .ail-root .ail-logo[data-provider='zai'] { background-image: url(icons/zai-dark.svg); }
@@ -400,7 +472,7 @@
 	&.ail-panel { padding-right: 10px; }
 	/* Cards wrap by the block's real width: one column in a narrow panel, as
 	   many as fit when it is wide (a big column, a focused or expanded card). */
-	&.ail-panel .ail-card { flex: 1 1 240px; max-width: 520px; }
+	&.ail-panel .ail-grid { --ail-card-min: 240px; }
 
 	&.ail-dashboard {
 		--ail-ring: 52px;
@@ -409,9 +481,8 @@
 		flex-direction: column;
 		gap: 14px;
 	}
-	&.ail-dashboard .ail-grid { gap: 12px; }
+	&.ail-dashboard .ail-grid { --ail-card-min: 300px; gap: 12px; }
 	&.ail-dashboard .ail-card {
-		flex: 1 1 300px;
 		padding: 14px 16px 16px;
 		gap: 12px;
 	}
@@ -447,7 +518,7 @@
 	}
 
 	&.ail-lens { padding: 4px 0; }
-	&.ail-lens .ail-card { flex-basis: 240px; }
+	&.ail-lens .ail-grid { --ail-card-min: 240px; }
 
 	.ail-note {
 		display: block;

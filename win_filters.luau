@@ -126,7 +126,9 @@ function M.providers(cx: WindowCx)
 	toggle_pick(cx, t("Providers shown (↵ toggles)", "Providers mostrados (↵ alterna)"), "eye", "hide_providers", function()
 		local hidden = kv_set("hide_providers")
 		local items: { PickItem } = {}
+		local listed: { [string]: boolean } = {}
 		for _, p in snap.providers do
+			listed[p.id] = true
 			local n = #p.accounts
 			table.insert(items, visibility({
 				label = tostring(p.name),
@@ -134,6 +136,25 @@ function M.providers(cx: WindowCx)
 				detail = if n == 1 then t("1 account", "1 conta") else n .. t(" accounts", " contas"),
 			}, hidden[p.id] == true))
 		end
+		-- Providers with only a broken login or no usage data show as alert
+		-- rows, not cards; they can be hidden too.
+		local function extra(list: any, detail: string)
+			if type(list) ~= "table" then
+				return
+			end
+			for _, item in list do
+				if type(item) == "table" and type(item.provider) == "string" and not listed[item.provider] then
+					listed[item.provider] = true
+					table.insert(items, visibility({
+						label = tostring(item.name or item.provider),
+						id = item.provider,
+						detail = detail,
+					}, hidden[item.provider] == true))
+				end
+			end
+		end
+		extra(snap.disabled, t("login with a problem", "login com problema"))
+		extra(snap.idle, t("no usage data", "sem dados de uso"))
 		return items
 	end)
 end

@@ -488,6 +488,27 @@ local function set_featured(provider: string, key: string?)
 	render_all()
 end
 
+-- The ↑/↓ buttons on a card: the same `provider_order` the order picker saves.
+local function move_provider(id: string, delta: number)
+	if snapshot == nil then
+		return
+	end
+	local shown: { string } = {}
+	for _, p in (snapshot :: model.Snapshot).providers do
+		table.insert(shown, p.id)
+	end
+	local order = prefs.move(prefs.read().order, shown, id, delta)
+	if order == nil then
+		return
+	end
+	tern.kv.set("provider_order", tern.json.array(order))
+	-- Marked seen so the tick does not filter a second time.
+	prefs_seen = tern.now()
+	tern.kv.set("prefs_at", prefs_seen)
+	apply_prefs()
+	render_all()
+end
+
 local function opts_for(layout: view.Layout): view.Opts
 	local p = prefs.read()
 	local empty: string? = nil
@@ -548,6 +569,11 @@ local function on_event(ev: UiEvent)
 		local cleared = string.match(ev.act, "^unfeature:(.+)$")
 		if cleared then
 			set_featured(cleared, nil)
+			return
+		end
+		local moved, delta = string.match(ev.act, "^move:([^|]+)|(-?%d)$")
+		if moved then
+			move_provider(moved, tonumber(delta) :: number)
 		end
 	end
 end

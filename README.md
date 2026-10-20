@@ -72,6 +72,7 @@ Inside the panel: `r` refreshes, `e` hides or shows e-mails, `c` opens the setti
 - **Panel modes:** a fixed column (default), a drawer that opens on the shortcut, a floating card, or off. The pane header's picture-in-picture button switches to the floating card, and its dock button switches back.
 - **Hiding:** hiding the panel parks it as a chip at the bottom of the window. Click the chip to bring it back.
 - **Floating card:** at rest it shows one line per provider, or a single provider. Click it to focus it: Tern enlarges it and it shows everything.
+- **Order:** hover a card and use its ↑/↓ buttons to move the provider, or set the whole order with **AI Limits: settings…**.
 - **Several accounts of one provider:** click an account's row to put it in front. The pin icon in the card header goes back to the most available account.
 
 ## Screenshots
