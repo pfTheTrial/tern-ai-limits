@@ -25,9 +25,11 @@ Dois "halves" que só conversam por `tern.kv`:
   `snapshot`/`snapshot_all` no kv. Desenha os blocos `cards` e `dashboard` e a
   lens `omp usage` via `view.luau`.
 - **window** (`window.luau`, UI): só registra comandos, chrome e eventos. Carrega
-  sob demanda, um módulo por timer, `win_place` + `win_core` (posicionamento do
-  painel), `win_alerts` (peek, status, título) e `win_toasts` (toasts), e no
-  primeiro uso `win_settings` e `win_filters` (pickers). Nunca busca dados:
+  sob demanda, um módulo por timer a partir de 1 s após o load, `win_place` +
+  `win_core` (posicionamento do painel), `win_alerts` (peek, status, título),
+  `win_toasts` (toasts), `win_cmds` (ações dos comandos) e `win_loop` (loop
+  principal), e no primeiro uso `win_settings` e `win_filters` (pickers).
+  Nunca busca dados:
   só lê o kv.
 - **Helpers** `*-usage.ps1`: imprimem um documento no formato do
   `omp usage --json` (`reports`, `disabledCredentials`, `generatedAt`).
