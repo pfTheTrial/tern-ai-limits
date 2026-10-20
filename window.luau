@@ -27,12 +27,31 @@ end
 local core: any = nil
 local alerts: any = nil
 
+-- The hooks running now, one mark each (the title hook keeps running after
+-- the status hook is stopped, so one shared mark would be cleared). Tern
+-- stops a hook that runs over its budget midway and keeps it off until a
+-- reload, which leaves its mark: win_loop reports it and the host reloads
+-- the plugin, as it does when the loop stops.
+local busy: { [string]: boolean } = {}
+
 tern.chrome.status(function(_pane: StatusPaneInfo): { StatusSegment }?
-	return if alerts then alerts.status() else nil
+	if alerts == nil then
+		return nil
+	end
+	busy.status = true
+	local segments = alerts.status()
+	busy.status = nil
+	return segments
 end)
 
 tern.chrome.window_title(function(win: WindowInfo): string?
-	return if alerts then alerts.title(win) else nil
+	if alerts == nil then
+		return nil
+	end
+	busy.title = true
+	local title = alerts.title(win)
+	busy.title = nil
+	return title
 end)
 
 -- Commands: id, icon, title. What each does is in win_cmds.
@@ -72,7 +91,9 @@ for _, c in COMMANDS do
 		icon = c[2],
 		group = group,
 		run = function(cx: WindowCx)
+			busy["command " .. id] = true;
 			(require("./win_cmds") :: any)[id](cx)
+			busy["command " .. id] = nil
 		end,
 	})
 end
@@ -128,7 +149,13 @@ local function boot(i: number)
 		elseif step == "win_cmds" then
 			require("./win_cmds")
 		else
-			require("./win_loop").start(config_at_load)
+			require("./win_loop").start(config_at_load, function(): string?
+				local stuck = next(busy)
+				if stuck then
+					busy[stuck] = nil
+				end
+				return stuck
+			end)
 			return
 		end
 		boot(i + 1)

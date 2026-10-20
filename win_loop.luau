@@ -27,9 +27,18 @@ local function watch_config(cx: WindowCx?)
 end
 
 local beat_at = -math.huge
+-- window.luau's: the hook a budget overrun left unfinished, if any.
+local stuck_hook: () -> string? = function(): string?
+	return nil
+end
 
 local function loop(cx: WindowCx?)
 	local now = tern.now()
+	local stuck = stuck_hook()
+	if stuck then
+		-- Tern keeps that hook off until a reload; the host half does it.
+		tern.kv.set("window_stuck", { hook = stuck, at = now })
+	end
 	if now - beat_at >= BEAT_MS then
 		-- The host half reloads the plugin when this stops moving.
 		beat_at = now
@@ -51,8 +60,9 @@ end
 
 -- `config_at_load` is the sliders request window.luau saw at load, so a
 -- press made while the modules were loading still opens the settings.
-function M.start(config_at_load: any)
+function M.start(config_at_load: any, stuck: () -> string?)
 	config_seen = config_at_load
+	stuck_hook = stuck
 	tern.timer(0, loop)
 	tern.timer(300, watch_config)
 end

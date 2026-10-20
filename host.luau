@@ -407,7 +407,40 @@ local beat_seen = tern.kv.get("window_beat")
 local beat_changed_at = tern.now()
 local reload_asked = false
 
+-- When the `window_stuck` report seen last was made; one from before this
+-- reload is already handled. kv hands back a new table on every read, so
+-- reports compare by their time.
+local function stuck_at(report: any): number?
+	return if type(report) == "table" then tonumber(report.at) else nil
+end
+local stuck_seen = stuck_at(tern.kv.get("window_stuck"))
+
+local function reload_plugin(why: string)
+	reload_asked = true
+	local tries = tern.kv.get("window_reloads")
+	tries = if type(tries) == "number" then tries else 0
+	if tries >= MAX_RELOADS then
+		return
+	end
+	tern.kv.set("window_reloads", tries + 1)
+	tern.log.warn("ai-limits: reloading the plugin", why)
+	pcall(function()
+		tern.process.run({ "tern", "plugin", "reload" }, { timeout_ms = 30 * 1000 }, function(_result, _)
+		end)
+	end)
+end
+
 local function watch_window()
+	-- A window hook that ran over its budget (a command, the status line)
+	-- stays off until a reload, and the loop still beats: the beat alone
+	-- would never tell.
+	local stuck = tern.kv.get("window_stuck")
+	local at = stuck_at(stuck)
+	if at ~= nil and at ~= stuck_seen and not reload_asked then
+		stuck_seen = at
+		reload_plugin("window hook " .. tostring(stuck.hook) .. " ran over its budget")
+		return
+	end
 	local beat = tern.kv.get("window_beat")
 	if beat ~= beat_seen then
 		beat_seen = beat
@@ -420,17 +453,7 @@ local function watch_window()
 	if reload_asked or not sized or tern.now() - beat_changed_at < WINDOW_GRACE_MS then
 		return
 	end
-	reload_asked = true
-	local tries = tern.kv.get("window_reloads")
-	tries = if type(tries) == "number" then tries else 0
-	if tries >= MAX_RELOADS then
-		return
-	end
-	tern.kv.set("window_reloads", tries + 1)
-	pcall(function()
-		tern.process.run({ "tern", "plugin", "reload" }, { timeout_ms = 30 * 1000 }, function(_result, _)
-		end)
-	end)
+	reload_plugin("the window half stopped beating")
 end
 
 -- One loop for the whole host: polls on schedule, answers refresh requests-- the window half writes to kv, and moves the countdowns once a minute.

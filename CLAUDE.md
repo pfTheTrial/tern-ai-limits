@@ -41,7 +41,11 @@ Dois "halves" que só conversam por `tern.kv`:
 
 - **Orçamento de 50 ms** por entrada/hook da janela (o Tern compila para código
   nativo antes). Não junte módulos da janela nem adicione `require` no topo de
-  `window.luau`; mantenha o carregamento preguiçoso existente.
+  `window.luau`; mantenha o carregamento preguiçoso existente. A barra de status
+  tem só 4 ms. Hook que estoura fica desligado até um reload: o `window.luau`
+  marca cada hook em `busy`, o `win_loop` reporta marca presa em `window_stuck`
+  e o host roda `tern plugin reload` (o mesmo vale para o loop parado, via
+  `window_beat`). Hook novo de chrome ou comando deve usar essa marca.
 - Todo arquivo `.luau` começa com `--!strict`. Siga o estilo: tabs, `snake_case`,
   comentários em inglês explicando o porquê.
 - **i18n:** todo texto visível passa por `t("English", "Português")` (idioma em
