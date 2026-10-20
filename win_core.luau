@@ -397,6 +397,33 @@ local was_parked: boolean? = nil
 -- Until when a closed panel is left alone (see M.pane_closed).
 local closing_until = -math.huge
 
+-- Rebuilding a tab's splits (another plugin regrouping its panes, a pane
+-- opened or closed) hands the column a new share; measure it again when the
+-- tab's panes change. Ratios are left out of the key, so a column the user
+-- dragged wider stays that way.
+local trees_seen: { [number]: string } = {}
+
+local function tree_key(tree: TabTree): string
+	if tree.pane then
+		return tostring(tree.pane)
+	end
+	local a, b = tree[1], tree[2]
+	return "(" .. (tree.split or "") .. " " .. (if a then tree_key(a) else "") .. " " .. (if b then tree_key(b) else "") .. ")"
+end
+
+local function watch_tree(cx: WindowCx, tab: number)
+	local layout = cx.session:layout(tab)
+	if layout == nil then
+		return
+	end
+	local key = tree_key(layout.root)
+	local seen = trees_seen[tab]
+	trees_seen[tab] = key
+	if seen ~= nil and seen ~= key and width_due == nil then
+		start_width()
+	end
+end
+
 local function ensure(cx: WindowCx)
 	local m = mode()
 	local info = panel(cx)
@@ -488,6 +515,8 @@ local function ensure(cx: WindowCx)
 	end
 	if info.parked or info.floating or info.tab ~= tab or edge_leaf(cx, tab, side(), nil) ~= info.pane then
 		place(cx, info, tab, keep, false)
+	else
+		watch_tree(cx, tab)
 	end
 end
 
